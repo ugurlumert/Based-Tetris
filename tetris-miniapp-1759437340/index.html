@@ -170,6 +170,99 @@
   window.__miniapp = { connectWallet, addXP, flushXP };
 })();
 </script>
+<!-- Ethers.js -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+<script>
+(function(){
+  const CONTRACT_ADDRESS = "0x1F268942987EE88397e6263b3Eff23a2840F31AD";
+
+  const BASE_PARAMS = {
+    chainId: '0x2105', // Base mainnet
+    chainName: 'Base Mainnet',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://base.llamarpc.com'],
+    blockExplorerUrls: ['https://basescan.org/']
+  };
+  const ABI = [
+    "function record(uint256 amount, bytes32 sessionId) external",
+    "function totalXp(address) view returns (uint256)"
+  ];
+
+  let currentAddress = null;
+  let xp = 0;        
+  let sessionXp = 0; 
+
+  async function ensureBaseNetwork(provider) {
+    const chainId = await provider.send('eth_chainId', []);
+    if (chainId !== BASE_PARAMS.chainId) {
+      try {
+        await provider.send('wallet_switchEthereumChain', [{ chainId: BASE_PARAMS.chainId }]);
+      } catch (e) {
+        if (e.code === 4902 || String(e.message||'').includes('Unrecognized chain ID')) {
+          await provider.send('wallet_addEthereumChain', [BASE_PARAMS]);
+        } else { throw e; }
+      }
+    }
+  }
+
+  async function connectWallet() {
+    if (!window.ethereum) { alert("MetaMask / Coinbase Wallet gerekiyor."); return; }
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    await ensureBaseNetwork(provider);
+    const signer = provider.getSigner();
+    currentAddress = await signer.getAddress();
+    document.getElementById("addr").textContent =
+      currentAddress.slice(0,6) + "..." + currentAddress.slice(-4);
+    loadXPFromStorage();
+  }
+
+  document.getElementById("connect").addEventListener("click", connectWallet);
+
+  // --- XP ---
+  function loadXPFromStorage(){
+    if (!currentAddress) return;
+    const saved = localStorage.getItem("xp_" + currentAddress.toLowerCase());
+    xp = saved ? parseInt(saved, 10) : 0;
+    updateXPUI();
+  }
+  function addXP(amount){
+    sessionXp += amount;
+    xp += amount;
+    if (currentAddress) {
+      localStorage.setItem("xp_" + currentAddress.toLowerCase(), String(xp));
+    }
+    updateXPUI();
+  }
+  function updateXPUI(){
+    const el = document.getElementById("xp");
+    if (el) el.textContent = xp;
+  }
+
+  // --- GAME OVER → on-chain kayıt ---
+  async function flushXP() {
+    if (!currentAddress || sessionXp <= 0) return;
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    await ensureBaseNetwork(provider);
+    const signer = provider.getSigner();
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    const sessionId = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+    try {
+      const tx = await contract.record(ethers.BigNumber.from(sessionXp), sessionId);
+      await tx.wait();
+      sessionXp = 0;
+    } catch (e) {
+      console.error("record() failed:", e);
+      alert("XP kaydedilemedi: " + (e?.data?.message || e?.message || e));
+    }
+  }
+
+  // global köprü
+  window.__miniapp = { connectWallet, addXP, flushXP };
+})();
+</script>
   
 </body>
 </html>

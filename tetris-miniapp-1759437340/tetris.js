@@ -1,7 +1,5 @@
-// TetriTiny — Start kontrollü, ArrowUp rotate, Space hard drop,
-// satır kırınca XP, her 20 taşta level + hız, Game Over'da on-chain flush
+// TetriTiny — Finish butonlu, Game Over + on-chain flush
 
-// ----- Canvas / ölçüler -----
 const canvas = document.getElementById('tetris');
 const ctx = canvas.getContext('2d');
 const COLS = 12, ROWS = 20, SCALE = 20;
@@ -9,31 +7,24 @@ canvas.width = COLS * SCALE;
 canvas.height = ROWS * SCALE;
 ctx.scale(SCALE, SCALE);
 
-// ----- Renkler -----
-const colors = [
-  null,
-  '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF',
-  '#FF8E0D', '#FFE138', '#3877FF'
-];
+const colors = [null,'#FF0D72','#0DC2FF','#0DFF72','#F538FF','#FF8E0D','#FFE138','#3877FF'];
 
-// ----- Arena & oyuncu -----
 const arena = createMatrix(COLS, ROWS);
 const player = { pos: { x:0, y:0 }, matrix: null };
 
-// ----- Oyun durumu -----
 let running = false;
-let dropInterval = 1000;     // ms (hız)
+let dropInterval = 1000;
 let dropCounter  = 0;
 let lastTime     = 0;
 
 let score = 0, lines = 0, level = 1;
-let piecesSinceLevel = 0;    // her yerleşen taş sayacı (20 → level+1)
+let piecesSinceLevel = 0;
 
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
 
-// ========== Yardımcılar ==========
+// ---- yardımcılar ----
 function createMatrix(w,h){ const m=[]; while(h--) m.push(new Array(w).fill(0)); return m; }
 
 function createPiece(t){
@@ -62,13 +53,11 @@ function merge(arena, p){
 }
 
 function rotate(mat, dir){
-  // transpose
   for(let y=0;y<mat.length;y++){
     for(let x=0;x<y;x++){
       [mat[x][y], mat[y][x]] = [mat[y][x], mat[x][y]];
     }
   }
-  // reverse rows or whole
   if(dir>0) mat.forEach(r=>r.reverse()); else mat.reverse();
 }
 
@@ -102,7 +91,7 @@ function updateScore(){
   if(levelEl) levelEl.textContent = level;
 }
 
-// ========== Oyun mekaniği ==========
+// ---- oyun mekaniği ----
 function arenaSweep(){
   let cleared = 0;
   outer: for(let y=arena.length-1;y>=0;y--){
@@ -120,20 +109,17 @@ function arenaSweep(){
     lines += cleared;
     updateScore();
 
-    // XP: satır başına 10
     if(window.__miniapp && typeof window.__miniapp.addXP==='function'){
       window.__miniapp.addXP(cleared*10);
     }
   }
 }
 
-// Bir taş yerleştiğinde (merge sonrası) çağrılır
 function onPieceLocked(){
   piecesSinceLevel++;
   if (piecesSinceLevel >= 20) {
     piecesSinceLevel = 0;
     level += 1;
-    // Hızı biraz artır: her level +80ms daha hızlı (alt sınır 120ms)
     dropInterval = Math.max(120, dropInterval - 80);
     updateScore();
   }
@@ -145,14 +131,8 @@ function playerReset(){
   player.pos.y = 0;
   player.pos.x = (arena[0].length/2|0) - (player.matrix[0].length/2|0);
   if(collide(arena, player)){
-    // Game over → on-chain XP gönder (varsa)
-    if (window.__miniapp && typeof window.__miniapp.flushXP === 'function') {
-      window.__miniapp.flushXP(); // await gerekmez
-    }
-    // tabloyu sıfırla
-    arena.forEach(r=>r.fill(0));
-    score=0; lines=0; level=1; dropInterval=1000; piecesSinceLevel=0;
-    updateScore();
+    // GAME OVER
+    endGame();
   }
 }
 
@@ -162,7 +142,7 @@ function playerDrop(){
     player.pos.y--;
     merge(arena,player);
     arenaSweep();
-    onPieceLocked();     // 1 taş yerleşti
+    onPieceLocked();
     playerReset();
   }
   dropCounter = 0;
@@ -170,10 +150,10 @@ function playerDrop(){
 
 function hardDrop(){
   while(!collide(arena, player)) player.pos.y++;
-  player.pos.y--; // bir adım geri
+  player.pos.y--;
   merge(arena, player);
   arenaSweep();
-  onPieceLocked();       // 1 taş yerleşti
+  onPieceLocked();
   playerReset();
   dropCounter = 0;
 }
@@ -198,14 +178,23 @@ function playerRotate(dir){
   }
 }
 
-// ========== Kontroller ==========
+// ---- bitiş / flush ----
+function endGame(){
+  running = false;
+  if (window.__miniapp && typeof window.__miniapp.flushXP === 'function') {
+    window.__miniapp.flushXP();
+  }
+  arena.forEach(r=>r.fill(0));
+  score=0; lines=0; level=1; dropInterval=1000; piecesSinceLevel=0;
+  updateScore();
+}
+
+// ---- kontroller ----
 document.addEventListener('keydown', e=>{
-  // bu tuşlar sayfayı kaydırmasın
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
     e.preventDefault();
   }
-  if(!running) return; // Start’a basmadan kontrol alma
-
+  if(!running) return;
   if(e.code==='ArrowLeft') playerMove(-1);
   else if(e.code==='ArrowRight') playerMove(1);
   else if(e.code==='ArrowDown') playerDrop();
@@ -213,7 +202,7 @@ document.addEventListener('keydown', e=>{
   else if(e.code==='Space') hardDrop();
 });
 
-// Start butonu oyun döngüsünü başlatır
+// ---- butonlar ----
 const startBtn = document.getElementById('startButton');
 if(startBtn){
   startBtn.addEventListener('click', ()=>{
@@ -227,7 +216,17 @@ if(startBtn){
   });
 }
 
-// İlk çizim (başlangıçta bekleme ekranı)
+// Finish butonu
+const finishBtn = document.getElementById('finishButton');
+if(finishBtn){
+  finishBtn.addEventListener('click', ()=>{
+    if(running){
+      endGame();
+    }
+  });
+}
+
+// ---- ilk çizim ----
 playerReset();
 updateScore();
 draw();

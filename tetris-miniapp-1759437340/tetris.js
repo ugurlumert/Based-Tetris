@@ -1,4 +1,4 @@
-// TetriTiny — Finish butonlu, Game Over + on-chain flush
+// TetriTiny — Finish butonlu, Game Over'da XP flush
 
 const canvas = document.getElementById('tetris');
 const ctx = canvas.getContext('2d');
@@ -24,7 +24,7 @@ const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
 
-// ---- yardımcılar ----
+// -----------------------
 function createMatrix(w,h){ const m=[]; while(h--) m.push(new Array(w).fill(0)); return m; }
 
 function createPiece(t){
@@ -91,7 +91,7 @@ function updateScore(){
   if(levelEl) levelEl.textContent = level;
 }
 
-// ---- oyun mekaniği ----
+// -----------------------
 function arenaSweep(){
   let cleared = 0;
   outer: for(let y=arena.length-1;y>=0;y--){
@@ -125,13 +125,14 @@ function onPieceLocked(){
   }
 }
 
+// -----------------------
 function playerReset(){
   const types = 'TJLOSZI';
   player.matrix = createPiece(types[types.length*Math.random()|0]);
   player.pos.y = 0;
   player.pos.x = (arena[0].length/2|0) - (player.matrix[0].length/2|0);
   if(collide(arena, player)){
-    // GAME OVER
+    // taş tavana değdi = Game Over
     endGame();
   }
 }
@@ -178,18 +179,21 @@ function playerRotate(dir){
   }
 }
 
-// ---- bitiş / flush ----
+// -----------------------
+// Ortak bitiş fonksiyonu
 function endGame(){
   running = false;
+  // TX gönder
   if (window.__miniapp && typeof window.__miniapp.flushXP === 'function') {
     window.__miniapp.flushXP();
   }
+  // tabloyu sıfırla
   arena.forEach(r=>r.fill(0));
   score=0; lines=0; level=1; dropInterval=1000; piecesSinceLevel=0;
   updateScore();
 }
 
-// ---- kontroller ----
+// -----------------------
 document.addEventListener('keydown', e=>{
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
     e.preventDefault();
@@ -202,7 +206,7 @@ document.addEventListener('keydown', e=>{
   else if(e.code==='Space') hardDrop();
 });
 
-// ---- butonlar ----
+// Start
 const startBtn = document.getElementById('startButton');
 if(startBtn){
   startBtn.addEventListener('click', ()=>{
@@ -216,7 +220,7 @@ if(startBtn){
   });
 }
 
-// Finish butonu
+// Finish
 const finishBtn = document.getElementById('finishButton');
 if(finishBtn){
   finishBtn.addEventListener('click', ()=>{
@@ -226,7 +230,7 @@ if(finishBtn){
   });
 }
 
-// ---- ilk çizim ----
+// -----------------------
 playerReset();
 updateScore();
 draw();

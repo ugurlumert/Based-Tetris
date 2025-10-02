@@ -4,8 +4,24 @@
   <meta charset="UTF-8" />
   <title>TetriTiny</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .banner {
+      width: 100%;
+      text-align: center;
+      padding: 10px 12px;
+      background: #12223d;
+      color: #e6fbff;
+      border-bottom: 1px solid #2b3e69;
+      font-weight: 700;
+      letter-spacing: .2px;
+    }
+    .me { font-weight: 700; color: #00ffcc; }
+  </style>
 </head>
 <body>
+  <!-- Kişisel sıralama bandı -->
+  <div id="myRankBanner" class="banner">Connect wallet to see your rank</div>
+
   <div class="container">
     <canvas id="tetris" width="240" height="400"></canvas>
 
@@ -25,8 +41,8 @@
       <button id="startButton">Start</button>
       <button id="finishButton">Finish</button>
 
-      <h2>Leaderboard</h2>
-      <button id="showLeaderboard">Show Leaderboard</button>
+      <h2>Your Rank</h2>
+      <!-- Sadece kendi satırın gösterilecek -->
       <ul id="leaderboard"></ul>
     </div>
   </div>
@@ -37,7 +53,7 @@
   <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-  <!-- Wallet + XP + Leaderboard -->
+  <!-- Wallet + XP + On-chain kayıt + Kişisel Leaderboard -->
   <script>
   (function(){
     const CONTRACT_ADDRESS = "0x1F268942987EE88397e6263b3Eff23a2840F31AD";
@@ -55,10 +71,11 @@
       "function totalXp(address) view returns (uint256)"
     ];
 
-    let currentAddress = null;
-    let xp = 0;        
-    let sessionXp = 0; 
+    let currentAddress = null;  // lowercased
+    let xp = 0;                 // UI toplam (local cache)
+    let sessionXp = 0;          // bu oyun oturumunda kazanılan
 
+    // ---------- Cüzdan ----------
     async function ensureBaseNetwork(provider) {
       const chainId = await provider.send('eth_chainId', []);
       if (chainId !== BASE_PARAMS.chainId) {
@@ -78,20 +95,21 @@
       await provider.send("eth_requestAccounts", []);
       await ensureBaseNetwork(provider);
       const signer = provider.getSigner();
-      currentAddress = await signer.getAddress();
+      currentAddress = (await signer.getAddress()).toLowerCase();
       document.getElementById("addr").textContent =
         currentAddress.slice(0,6) + "..." + currentAddress.slice(-4);
       loadXPFromStorage();
+      fetchAndRenderMyRank(); // bağlanınca kendi sıralamanı hesapla
     }
 
     document.getElementById("connect").addEventListener("click", () => {
       connectWallet().catch(console.error);
     });
 
-    // --- XP ---
+    // ---------- XP (UI + localStorage) ----------
     function loadXPFromStorage(){
       if (!currentAddress) return;
-      const saved = localStorage.getItem("xp_" + currentAddress.toLowerCase());
+      const saved = localStorage.getItem("xp_" + currentAddress);
       xp = saved ? parseInt(saved, 10) : 0;
       updateXPUI();
     }
@@ -99,7 +117,7 @@
       sessionXp += amount;
       xp += amount;
       if (currentAddress) {
-        localStorage.setItem("xp_" + currentAddress.toLowerCase(), String(xp));
+        localStorage.setItem("xp_" + currentAddress, String(xp));
       }
       updateXPUI();
     }
@@ -108,9 +126,9 @@
       if (el) el.textContent = xp;
     }
 
-    // --- On-chain XP kaydı ---
+    // ---------- On-chain XP kaydı ----------
     async function flushXP() {
-      if (!currentAddress || sessionXp <= 0) return;
+      if (!currentAddress || sessionXp <= 0) return;  // boş XP gönderme
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       await ensureBaseNetwork(provider);
       const signer = provider.getSigner();
@@ -120,78 +138,92 @@
       try {
         const tx = await contract.record(ethers.BigNumber.from(sessionXp), sessionId);
         await tx.wait();
-        sessionXp = 0;
+        sessionXp = 0;                  // yalnızca oturum XP'si sıfırlanır
+        await fetchAndRenderMyRank();   // TX sonrası sıralamayı güncelle
       } catch (e) {
         console.error("record() failed:", e);
         alert("XP kaydedilemedi: " + (e?.data?.message || e?.message || e));
       }
     }
 
-    // ---- Farcaster handle getirici ----
+    // ---------- Farcaster handle (Neynar) ----------
     async function getFarcasterHandle(addr){
       try {
         const resp = await fetch(`https://api.neynar.com/v2/farcaster/user-by-verification?address=${addr}`, {
           headers: {
             "accept": "application/json",
-            "api_key": "NEYNAR_ANON_API_KEY"   // public key
+            "api_key": "NEYNAR_ANON_API_KEY"   // public demo key (limitli)
           }
         });
         const data = await resp.json();
-        if (data && data.result && data.result.user && data.result.user.username) {
-          return "@" + data.result.user.username;
-        }
-      } catch(e){
-        console.error("farcaster lookup failed", addr, e);
-      }
+        if (data?.result?.user?.username) return "@"+data.result.user.username;
+      } catch(e){ console.error("farcaster lookup failed", addr, e); }
       return null;
     }
 
-    // --- Leaderboard: eventleri tara + handle çöz ---
-    async function fetchLeaderboard(){
-      const provider = new ethers.providers.JsonRpcProvider("https://base.llamarpc.com");
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-
-      const currentBlock = await provider.getBlockNumber();
-      const fromBlock = 0; // daha iyi performans için deploy block numarasını yaz
-      const events = await contract.queryFilter("XpRecorded", fromBlock, currentBlock);
-
-      const players = new Set();
-      events.forEach(ev => players.add(ev.args.player));
-
-      const results = [];
-      for (const addr of players) {
-        try {
-          const xpVal = await contract.totalXp(addr);
-          const handle = await getFarcasterHandle(addr);
-          results.push({
-            address: addr,
-            xp: xpVal.toNumber(),
-            name: handle ? handle : (addr.slice(0,6)+"..."+addr.slice(-4))
-          });
-        } catch (e) {
-          console.error("fetch xp failed", addr, e);
-        }
+    // ---------- Kişisel Leaderboard (sadece SEN) ----------
+    async function fetchAndRenderMyRank(){
+      const banner = document.getElementById("myRankBanner");
+      const ul = document.getElementById("leaderboard");
+      if (!currentAddress) {
+        banner.textContent = "Connect wallet to see your rank";
+        if (ul) ul.innerHTML = "";
+        return;
       }
 
-      results.sort((a,b)=>b.xp - a.xp);
-      renderLeaderboard(results);
+      try {
+        const provider = new ethers.providers.JsonRpcProvider("https://base.llamarpc.com");
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+
+        // Performans için mümkünse deploy block numaranı yaz
+        const currentBlock = await provider.getBlockNumber();
+        const fromBlock = 0; // örn: 21_234_567 (deploy block)
+
+        // Tüm oyuncuları event'ten topla
+        const events = await contract.queryFilter("XpRecorded", fromBlock, currentBlock);
+        const players = new Set(events.map(ev => ev.args.player.toLowerCase()));
+        // Adresin event yoksa bile listeye ekle (XP 0 olabilir)
+        players.add(currentAddress);
+
+        // Hepsinin totalXp'sini çek
+        const all = [];
+        for (const addr of players) {
+          try {
+            const xpVal = await contract.totalXp(addr);
+            all.push({ address: addr, xp: xpVal.toNumber() });
+          } catch(e) { console.error("xp fetch fail", addr, e); }
+        }
+
+        // Sırala ve benim indeximi bul
+        all.sort((a,b)=>b.xp - a.xp);
+        const myIndex = all.findIndex(x => x.address === currentAddress);
+        const myXp = (myIndex >= 0 ? all[myIndex].xp : 0);
+
+        // İsim: Farcaster varsa handle kullan
+        const handle = await getFarcasterHandle(currentAddress);
+        const myName = handle ? handle : (currentAddress.slice(0,6)+"..."+currentAddress.slice(-4));
+
+        // Banner ve tek satırlık listeyi render et
+        const rankText = `You’re #${myIndex+1} — ${myXp} XP ${handle ? "(" + handle + ")" : ""}`;
+        banner.textContent = rankText;
+
+        if (ul) {
+          ul.innerHTML = "";
+          const li = document.createElement("li");
+          li.className = "me";
+          li.textContent = `#${myIndex+1} ${myName} — ${myXp} XP (You)`;
+          ul.appendChild(li);
+        }
+      } catch (e) {
+        console.error("my-rank failed:", e);
+      }
     }
 
-    function renderLeaderboard(list){
-      const ul = document.getElementById("leaderboard");
-      if (!ul) return;
-      ul.innerHTML = "";
-      list.forEach((item, i)=>{
-        const li = document.createElement("li");
-        li.textContent = `#${i+1} ${item.name} — ${item.xp} XP`;
-        ul.appendChild(li);
-      });
-    }
+    // otomatik: sayfa açılırken (cüzdan bağlıysa) dene
+    window.addEventListener("load", fetchAndRenderMyRank);
 
-    document.getElementById("showLeaderboard").addEventListener("click", fetchLeaderboard);
-
-    // global
-    window.__miniapp = { connectWallet, addXP, flushXP, fetchLeaderboard };
+    // tetris.js için global köprüler
+    window.__miniapp = { connectWallet, addXP, flushXP, fetchAndRenderMyRank };
   })();
   </script>
 </body>

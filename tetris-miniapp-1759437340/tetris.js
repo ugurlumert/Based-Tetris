@@ -1,5 +1,5 @@
 // TetriTiny — Start kontrollü, ArrowUp rotate, Space hard drop,
-// satır kırınca XP, HER 20 TAŞTA level + hız artışı
+// satır kırınca XP, her 20 taşta level + hız, Game Over'da on-chain flush
 
 // ----- Canvas / ölçüler -----
 const canvas = document.getElementById('tetris');
@@ -27,7 +27,7 @@ let dropCounter  = 0;
 let lastTime     = 0;
 
 let score = 0, lines = 0, level = 1;
-let piecesSinceLevel = 0;    // <<< her yerleşen taş sayacı
+let piecesSinceLevel = 0;    // her yerleşen taş sayacı (20 → level+1)
 
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
@@ -145,7 +145,11 @@ function playerReset(){
   player.pos.y = 0;
   player.pos.x = (arena[0].length/2|0) - (player.matrix[0].length/2|0);
   if(collide(arena, player)){
-    // Game over → temizle
+    // Game over → on-chain XP gönder (varsa)
+    if (window.__miniapp && typeof window.__miniapp.flushXP === 'function') {
+      window.__miniapp.flushXP(); // await gerekmez
+    }
+    // tabloyu sıfırla
     arena.forEach(r=>r.fill(0));
     score=0; lines=0; level=1; dropInterval=1000; piecesSinceLevel=0;
     updateScore();
@@ -158,7 +162,7 @@ function playerDrop(){
     player.pos.y--;
     merge(arena,player);
     arenaSweep();
-    onPieceLocked();     // <<< 1 taş yerleşti
+    onPieceLocked();     // 1 taş yerleşti
     playerReset();
   }
   dropCounter = 0;
@@ -169,7 +173,7 @@ function hardDrop(){
   player.pos.y--; // bir adım geri
   merge(arena, player);
   arenaSweep();
-  onPieceLocked();       // <<< 1 taş yerleşti
+  onPieceLocked();       // 1 taş yerleşti
   playerReset();
   dropCounter = 0;
 }

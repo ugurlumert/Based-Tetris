@@ -1,17 +1,22 @@
-<script>
+// wallet.js (Dış JS: script etiketi YOK)
 let currentAddress = null;
 let xp = 0;
 
 async function connectWallet() {
-  if (!window.ethereum) {
-    alert("Bir web3 cüzdanı (MetaMask / Coinbase Wallet) gerekli.");
-    return;
+  try {
+    if (!window.ethereum) {
+      alert("Web3 cüzdan (MetaMask / Coinbase Wallet) gerekli.");
+      return;
+    }
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    currentAddress = accounts[0];
+    const addrEl = document.getElementById("addr");
+    if (addrEl) addrEl.textContent = currentAddress.slice(0, 6) + "..." + currentAddress.slice(-4);
+    loadXP();
+  } catch (e) {
+    console.error("connectWallet error:", e);
+    alert("Cüzdan bağlanamadı: " + (e?.message || e));
   }
-  const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-  currentAddress = accounts[0];
-  document.getElementById("addr").textContent =
-    currentAddress.slice(0, 6) + "..." + currentAddress.slice(-4);
-  loadXP();
 }
 
 function loadXP() {
@@ -34,5 +39,5 @@ function updateXPUI() {
   if (el) el.textContent = xp;
 }
 
+// Global köprü
 window.__miniapp = { connectWallet, addXP, loadXP };
-</script>

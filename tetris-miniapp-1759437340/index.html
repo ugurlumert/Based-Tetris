@@ -24,6 +24,10 @@
 
       <button id="startButton">Start</button>
       <button id="finishButton">Finish</button>
+
+      <h2>Leaderboard</h2>
+      <button id="showLeaderboard">Show Leaderboard</button>
+      <ul id="leaderboard"></ul>
     </div>
   </div>
 
@@ -33,7 +37,7 @@
   <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-  <!-- Wallet + XP + On-chain kayıt -->
+  <!-- Wallet + XP + Leaderboard -->
   <script>
   (function(){
     const CONTRACT_ADDRESS = "0x1F268942987EE88397e6263b3Eff23a2840F31AD";
@@ -46,6 +50,7 @@
       blockExplorerUrls: ['https://basescan.org/']
     };
     const ABI = [
+      "event XpRecorded(address indexed player, uint256 amount, uint256 newTotal, bytes32 sessionId)",
       "function record(uint256 amount, bytes32 sessionId) external",
       "function totalXp(address) view returns (uint256)"
     ];
@@ -68,7 +73,7 @@
     }
 
     async function connectWallet() {
-      if (!window.ethereum) { alert("MetaMask / Coinbase Wallet gerekiyor."); return; }
+      if (!window.ethereum) { alert("MetaMask / Coinbase Wallet gerekiyor."); throw new Error("no-ethereum"); }
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
       await ensureBaseNetwork(provider);
@@ -79,7 +84,9 @@
       loadXPFromStorage();
     }
 
-    document.getElementById("connect").addEventListener("click", connectWallet);
+    document.getElementById("connect").addEventListener("click", () => {
+      connectWallet().catch(console.error);
+    });
 
     // --- XP ---
     function loadXPFromStorage(){
@@ -101,7 +108,7 @@
       if (el) el.textContent = xp;
     }
 
-    // --- GAME OVER / FINISH → on-chain kayıt ---
+    // --- On-chain XP kaydı ---
     async function flushXP() {
       if (!currentAddress || sessionXp <= 0) return;
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -120,8 +127,71 @@
       }
     }
 
-    // tetris.js için global köprü
-    window.__miniapp = { connectWallet, addXP, flushXP };
+    // ---- Farcaster handle getirici ----
+    async function getFarcasterHandle(addr){
+      try {
+        const resp = await fetch(`https://api.neynar.com/v2/farcaster/user-by-verification?address=${addr}`, {
+          headers: {
+            "accept": "application/json",
+            "api_key": "NEYNAR_ANON_API_KEY"   // public key
+          }
+        });
+        const data = await resp.json();
+        if (data && data.result && data.result.user && data.result.user.username) {
+          return "@" + data.result.user.username;
+        }
+      } catch(e){
+        console.error("farcaster lookup failed", addr, e);
+      }
+      return null;
+    }
+
+    // --- Leaderboard: eventleri tara + handle çöz ---
+    async function fetchLeaderboard(){
+      const provider = new ethers.providers.JsonRpcProvider("https://base.llamarpc.com");
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+
+      const currentBlock = await provider.getBlockNumber();
+      const fromBlock = 0; // daha iyi performans için deploy block numarasını yaz
+      const events = await contract.queryFilter("XpRecorded", fromBlock, currentBlock);
+
+      const players = new Set();
+      events.forEach(ev => players.add(ev.args.player));
+
+      const results = [];
+      for (const addr of players) {
+        try {
+          const xpVal = await contract.totalXp(addr);
+          const handle = await getFarcasterHandle(addr);
+          results.push({
+            address: addr,
+            xp: xpVal.toNumber(),
+            name: handle ? handle : (addr.slice(0,6)+"..."+addr.slice(-4))
+          });
+        } catch (e) {
+          console.error("fetch xp failed", addr, e);
+        }
+      }
+
+      results.sort((a,b)=>b.xp - a.xp);
+      renderLeaderboard(results);
+    }
+
+    function renderLeaderboard(list){
+      const ul = document.getElementById("leaderboard");
+      if (!ul) return;
+      ul.innerHTML = "";
+      list.forEach((item, i)=>{
+        const li = document.createElement("li");
+        li.textContent = `#${i+1} ${item.name} — ${item.xp} XP`;
+        ul.appendChild(li);
+      });
+    }
+
+    document.getElementById("showLeaderboard").addEventListener("click", fetchLeaderboard);
+
+    // global
+    window.__miniapp = { connectWallet, addXP, flushXP, fetchLeaderboard };
   })();
   </script>
 </body>

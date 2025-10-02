@@ -1,13 +1,11 @@
-// --- TetriTiny (wallet XP entegre) ---
-// Canvas ayarı
-const canvas = document.getElementById('tetris'); // index.html'deki canvas id = "tetris"
+// --- TetriTiny (wallet XP entegre + klavye fix) ---
+const canvas = document.getElementById('tetris');
 const ctx = canvas.getContext('2d');
 const COLS = 10, ROWS = 20, SIZE = 24;
 canvas.width = COLS * SIZE;
 canvas.height = ROWS * SIZE;
 ctx.scale(SIZE, SIZE);
 
-// Renkler ve taşlar
 const colors = ['#000','#39c5bb','#e83f6f','#ffd166','#06d6a0','#3a86ff','#ff006e','#8338ec'];
 const pieces = {
   'T': [[[0,0,0],[1,1,1],[0,1,0]]],
@@ -19,7 +17,6 @@ const pieces = {
   'I': [[[0,0,0,0],[7,7,7,7],[0,0,0,0],[0,0,0,0]]],
 };
 
-// Oyun alanı
 const arena = Array.from({length: ROWS}, () => Array(COLS).fill(0));
 let current = randomPiece();
 let dropCounter = 0, dropInterval = 800, lastTime = 0;
@@ -55,7 +52,6 @@ function merge(arena, p) {
   p.matrix.forEach((row,y)=>row.forEach((v,x)=>{ if(v) arena[p.y+y][p.x+x]=v; }));
 }
 
-// --- XP entegre clearLines ---
 function clearLines() {
   let rowCount = 0;
   outer: for (let y = arena.length - 1; y >= 0; y--) {
@@ -122,7 +118,6 @@ function update(time=0) {
 function resetPiece() {
   current = randomPiece();
   if (collide(arena,current)) {
-    // Game Over
     arena.forEach(r=>r.fill(0));
     score = 0; lines = 0; level = 1; dropInterval = 800;
     updateScore();
@@ -154,7 +149,6 @@ function playerRotate() {
     current.x = oldX + offsets[i];
     if (!collide(arena,current)) return;
   }
-  // Rotate geri al
   current.matrix = rotate(rotate(rotate(m)));
   current.x = oldX;
 }
@@ -174,8 +168,11 @@ function updateScore(){
   if (levelEl) levelEl.textContent = level;
 }
 
-// Kontroller
+// Klavye: sayfa kaymasını engelle
 document.addEventListener('keydown', e=>{
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
+    e.preventDefault();
+  }
   if (e.key==='ArrowLeft') playerMove(-1);
   else if (e.key==='ArrowRight') playerMove(1);
   else if (e.key==='ArrowDown') playerDrop();
@@ -183,10 +180,9 @@ document.addEventListener('keydown', e=>{
   else if (e.code==='Space') hardDrop();
 });
 
-// (isteğe bağlı) Start butonu varsa
+// Start düğmesi varsa
 const startBtn = document.getElementById('startButton');
 if (startBtn) startBtn.onclick = () => { lastTime = 0; update(); };
 
-// Başlat
 updateScore();
 update();

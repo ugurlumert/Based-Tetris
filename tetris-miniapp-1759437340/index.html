@@ -1,25 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>TetriTiny</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <div class="game">
-      <canvas id="tetris" width="240" height="400"></canvas>
-    </div>
+    <canvas id="tetris" width="240" height="400"></canvas>
+
     <div class="side">
       <h1>TetriTiny</h1>
 
-      <!-- Wallet & XP Alanı -->
       <div class="row">
-        <button id="connect" onclick="__miniapp.connectWallet()">🔗 Connect Wallet</button>
+        <button id="connect">🔗 Connect Wallet</button>
       </div>
       <p>Address: <span id="addr">Not connected</span></p>
       <p>XP: <span id="xp">0</span></p>
-      <!-- /Wallet -->
 
       <p>Score: <span id="score">0</span></p>
       <p>Lines: <span id="lines">0</span></p>
@@ -28,8 +25,57 @@
     </div>
   </div>
 
-  <!-- Scripts -->
   <script src="tetris.js"></script>
-  <script src="wallet.js"></script>
+
+  <!-- Wallet + XP (inline, dış dosyaya gerek yok) -->
+  <script>
+  (function(){
+    let currentAddress = null;
+    let xp = 0;
+
+    async function connectWallet() {
+      try {
+        if (!window.ethereum) {
+          alert("Web3 cüzdanı bulunamadı. Lütfen MetaMask veya Coinbase Wallet kurun.");
+          return;
+        }
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        currentAddress = accounts[0];
+        document.getElementById("addr").textContent =
+          currentAddress.slice(0,6) + "..." + currentAddress.slice(-4);
+        loadXP();
+      } catch (e) {
+        console.error(e);
+        alert("Cüzdan bağlanamadı: " + (e?.message || e));
+      }
+    }
+
+    function loadXP() {
+      if (!currentAddress) return;
+      const saved = localStorage.getItem("xp_" + currentAddress.toLowerCase());
+      xp = saved ? parseInt(saved, 10) : 0;
+      updateXPUI();
+    }
+
+    function addXP(amount) {
+      xp += amount;
+      if (currentAddress) {
+        localStorage.setItem("xp_" + currentAddress.toLowerCase(), String(xp));
+      }
+      updateXPUI();
+    }
+
+    function updateXPUI() {
+      const el = document.getElementById("xp");
+      if (el) el.textContent = xp;
+    }
+
+    // Buton bağla
+    document.getElementById("connect").addEventListener("click", connectWallet);
+
+    // tetris.js çağırabilsin diye global köprü
+    window.__miniapp = { connectWallet, addXP, loadXP };
+  })();
+  </script>
 </body>
 </html>

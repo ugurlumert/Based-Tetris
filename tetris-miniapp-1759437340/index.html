@@ -19,7 +19,7 @@
   </style>
 </head>
 <body>
-  <!-- Kişisel sıralama bandı -->
+  <!-- Kişisel sıralama -->
   <div id="myRankBanner" class="banner">Connect wallet to see your rank</div>
 
   <div class="container">
@@ -42,7 +42,6 @@
       <button id="finishButton">Finish</button>
 
       <h2>Your Rank</h2>
-      <!-- Sadece kendi satırın gösterilecek -->
       <ul id="leaderboard"></ul>
     </div>
   </div>
@@ -53,13 +52,14 @@
   <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-  <!-- Wallet + XP + On-chain kayıt + Kişisel Leaderboard -->
+  <!-- Wallet + XP + Rank -->
   <script>
   (function(){
     const CONTRACT_ADDRESS = "0x1F268942987EE88397e6263b3Eff23a2840F31AD";
+    const DEPLOY_BLOCK = 36327995; // kontrat deploy block numarası
 
     const BASE_PARAMS = {
-      chainId: '0x2105', // Base mainnet
+      chainId: '0x2105',
       chainName: 'Base Mainnet',
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
       rpcUrls: ['https://base.llamarpc.com'],
@@ -71,11 +71,11 @@
       "function totalXp(address) view returns (uint256)"
     ];
 
-    let currentAddress = null;  // lowercased
-    let xp = 0;                 // UI toplam (local cache)
-    let sessionXp = 0;          // bu oyun oturumunda kazanılan
+    let currentAddress = null;
+    let xp = 0;
+    let sessionXp = 0;
 
-    // ---------- Cüzdan ----------
+    // ---- Wallet ----
     async function ensureBaseNetwork(provider) {
       const chainId = await provider.send('eth_chainId', []);
       if (chainId !== BASE_PARAMS.chainId) {
@@ -88,7 +88,6 @@
         }
       }
     }
-
     async function connectWallet() {
       if (!window.ethereum) { alert("MetaMask / Coinbase Wallet gerekiyor."); throw new Error("no-ethereum"); }
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -99,14 +98,11 @@
       document.getElementById("addr").textContent =
         currentAddress.slice(0,6) + "..." + currentAddress.slice(-4);
       loadXPFromStorage();
-      fetchAndRenderMyRank(); // bağlanınca kendi sıralamanı hesapla
+      fetchAndRenderMyRank(); // bağlanır bağlanmaz rank göster
     }
+    document.getElementById("connect").addEventListener("click", ()=>{ connectWallet().catch(console.error); });
 
-    document.getElementById("connect").addEventListener("click", () => {
-      connectWallet().catch(console.error);
-    });
-
-    // ---------- XP (UI + localStorage) ----------
+    // ---- XP ----
     function loadXPFromStorage(){
       if (!currentAddress) return;
       const saved = localStorage.getItem("xp_" + currentAddress);
@@ -121,47 +117,37 @@
       }
       updateXPUI();
     }
-    function updateXPUI(){
-      const el = document.getElementById("xp");
-      if (el) el.textContent = xp;
-    }
+    function updateXPUI(){ const el=document.getElementById("xp"); if(el) el.textContent=xp; }
 
-    // ---------- On-chain XP kaydı ----------
+    // ---- On-chain XP ----
     async function flushXP() {
-      if (!currentAddress || sessionXp <= 0) return;  // boş XP gönderme
+      if (!currentAddress || sessionXp <= 0) return;
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       await ensureBaseNetwork(provider);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-
       const sessionId = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       try {
         const tx = await contract.record(ethers.BigNumber.from(sessionXp), sessionId);
         await tx.wait();
-        sessionXp = 0;                  // yalnızca oturum XP'si sıfırlanır
-        await fetchAndRenderMyRank();   // TX sonrası sıralamayı güncelle
-      } catch (e) {
-        console.error("record() failed:", e);
-        alert("XP kaydedilemedi: " + (e?.data?.message || e?.message || e));
-      }
+        sessionXp = 0;
+        await fetchAndRenderMyRank(); // TX sonrası rank güncelle
+      } catch(e){ console.error("record failed", e); }
     }
 
-    // ---------- Farcaster handle (Neynar) ----------
+    // ---- Farcaster handle ----
     async function getFarcasterHandle(addr){
       try {
         const resp = await fetch(`https://api.neynar.com/v2/farcaster/user-by-verification?address=${addr}`, {
-          headers: {
-            "accept": "application/json",
-            "api_key": "NEYNAR_ANON_API_KEY"   // public demo key (limitli)
-          }
+          headers: { "accept":"application/json", "api_key":"NEYNAR_ANON_API_KEY" }
         });
         const data = await resp.json();
-        if (data?.result?.user?.username) return "@"+data.result.user.username;
-      } catch(e){ console.error("farcaster lookup failed", addr, e); }
+        if(data?.result?.user?.username) return "@"+data.result.user.username;
+      }catch(e){ console.error("farcaster lookup",addr,e); }
       return null;
     }
 
-    // ---------- Kişisel Leaderboard (sadece SEN) ----------
+    // ---- Rank sadece SEN ----
     async function fetchAndRenderMyRank(){
       const banner = document.getElementById("myRankBanner");
       const ul = document.getElementById("leaderboard");
@@ -175,17 +161,12 @@
         const provider = new ethers.providers.JsonRpcProvider("https://base.llamarpc.com");
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 
-        // Performans için mümkünse deploy block numaranı yaz
         const currentBlock = await provider.getBlockNumber();
-        const fromBlock = 0; // örn: 21_234_567 (deploy block)
+        const events = await contract.queryFilter("XpRecorded", DEPLOY_BLOCK, currentBlock);
 
-        // Tüm oyuncuları event'ten topla
-        const events = await contract.queryFilter("XpRecorded", fromBlock, currentBlock);
         const players = new Set(events.map(ev => ev.args.player.toLowerCase()));
-        // Adresin event yoksa bile listeye ekle (XP 0 olabilir)
-        players.add(currentAddress);
+        players.add(currentAddress); // XP 0 olsa bile listeye ekle
 
-        // Hepsinin totalXp'sini çek
         const all = [];
         for (const addr of players) {
           try {
@@ -194,16 +175,13 @@
           } catch(e) { console.error("xp fetch fail", addr, e); }
         }
 
-        // Sırala ve benim indeximi bul
         all.sort((a,b)=>b.xp - a.xp);
         const myIndex = all.findIndex(x => x.address === currentAddress);
         const myXp = (myIndex >= 0 ? all[myIndex].xp : 0);
 
-        // İsim: Farcaster varsa handle kullan
         const handle = await getFarcasterHandle(currentAddress);
         const myName = handle ? handle : (currentAddress.slice(0,6)+"..."+currentAddress.slice(-4));
 
-        // Banner ve tek satırlık listeyi render et
         const rankText = `You’re #${myIndex+1} — ${myXp} XP ${handle ? "(" + handle + ")" : ""}`;
         banner.textContent = rankText;
 
@@ -219,10 +197,8 @@
       }
     }
 
-    // otomatik: sayfa açılırken (cüzdan bağlıysa) dene
     window.addEventListener("load", fetchAndRenderMyRank);
 
-    // tetris.js için global köprüler
     window.__miniapp = { connectWallet, addXP, flushXP, fetchAndRenderMyRank };
   })();
   </script>

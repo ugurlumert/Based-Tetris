@@ -1,0 +1,8 @@
+{
+  "name": "TetriTiny",
+  "short_description": "A tiny Tetris you can play inside Farcaster Mini Apps.",
+  "description": "Tap to open and play. No wallet required. Built as a static mini app.",
+  "icon": "https://REPLACE_ME/icon.png",
+  "website": "https://REPLACE_ME/",
+  "app_version": "1.0.0"
+}

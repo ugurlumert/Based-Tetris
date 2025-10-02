@@ -1,188 +1,275 @@
-// --- TetriTiny (wallet XP entegre + klavye fix) ---
 const canvas = document.getElementById('tetris');
-const ctx = canvas.getContext('2d');
-const COLS = 10, ROWS = 20, SIZE = 24;
-canvas.width = COLS * SIZE;
-canvas.height = ROWS * SIZE;
-ctx.scale(SIZE, SIZE);
+const context = canvas.getContext('2d');
+context.scale(20, 20);
 
-const colors = ['#000','#39c5bb','#e83f6f','#ffd166','#06d6a0','#3a86ff','#ff006e','#8338ec'];
-const pieces = {
-  'T': [[[0,0,0],[1,1,1],[0,1,0]]],
-  'O': [[[2,2],[2,2]]],
-  'L': [[[0,3,0],[0,3,0],[0,3,3]]],
-  'J': [[[0,4,0],[0,4,0],[4,4,0]]],
-  'S': [[[0,5,5],[5,5,0],[0,0,0]]],
-  'Z': [[[6,6,0],[0,6,6],[0,0,0]]],
-  'I': [[[0,0,0,0],[7,7,7,7],[0,0,0,0],[0,0,0,0]]],
-};
+let score = 0;
+let lines = 0;
+let level = 1;
 
-const arena = Array.from({length: ROWS}, () => Array(COLS).fill(0));
-let current = randomPiece();
-let dropCounter = 0, dropInterval = 800, lastTime = 0;
-let score = 0, lines = 0, level = 1;
-const scoreEl = document.getElementById('score');
-const linesEl = document.getElementById('lines');
-const levelEl = document.getElementById('level');
+// Prevent space bar from scrolling the page
+window.addEventListener("keydown", function(e) {
+  if (e.code === "Space" && e.target === document.body) {
+    e.preventDefault();
+  }
+});
 
-function randomPiece() {
-  const keys = Object.keys(pieces);
-  const k = keys[(keys.length * Math.random()) | 0];
-  const shape = JSON.parse(JSON.stringify(pieces[k][0]));
-  return { matrix: shape, x: (COLS/2|0) - (shape[0].length/2|0), y: 0 };
+function arenaSweep() {
+  let rowCount = 1;
+  outer: for (let y = arena.length - 1; y >= 0; --y) {
+    for (let x = 0; x < arena[y].length; ++x) {
+      if (arena[y][x] === 0) {
+        continue outer;
+      }
+    }
+    const row = arena.splice(y, 1)[0].fill(0);
+    arena.unshift(row);
+    ++y;
+
+    score += rowCount * 10;
+    lines += 1;
+    if (lines % 10 === 0) level++;
+
+    // XP ekleme: her row için +10 XP
+    if (window.__miniapp && typeof window.__miniapp.addXP === 'function') {
+      window.__miniapp.addXP(rowCount * 10);
+    }
+
+    rowCount *= 2;
+  }
+  updateScore();
 }
 
-function rotate(m) {
-  const N = m.length;
-  const res = Array.from({length:N},()=>Array(N).fill(0));
-  for (let y=0;y<N;y++) for (let x=0;x<N;x++) res[x][N-1-y] = m[y][x];
-  return res;
-}
-
-function collide(arena, p) {
-  const m = p.matrix;
-  for (let y=0;y<m.length;y++) for (let x=0;x<m[y].length;x++) {
-    if (m[y][x]!==0 && (arena[y+p.y] && arena[y+p.y][x+p.x]) !== 0) return true;
-    if (m[y][x]!==0 && (!arena[y+p.y] || arena[y+p.y][x+p.x]===undefined)) return true;
+function collide(arena, player) {
+  const m = player.matrix;
+  const o = player.pos;
+  for (let y = 0; y < m.length; ++y) {
+    for (let x = 0; x < m[y].length; ++x) {
+      if (m[y][x] !== 0 &&
+          (arena[y + o.y] &&
+           arena[y + o.y][x + o.x]) !== 0) {
+        return true;
+      }
+    }
   }
   return false;
 }
 
-function merge(arena, p) {
-  p.matrix.forEach((row,y)=>row.forEach((v,x)=>{ if(v) arena[p.y+y][p.x+x]=v; }));
-}
-
-function clearLines() {
-  let rowCount = 0;
-  outer: for (let y = arena.length - 1; y >= 0; y--) {
-    for (let x = 0; x < arena[y].length; x++) {
-      if (arena[y][x] === 0) continue outer;
-    }
-    const row = arena.splice(y, 1)[0].fill(0);
-    arena.unshift(row);
-    y++;
-    rowCount++;
+function createMatrix(w, h) {
+  const matrix = [];
+  while (h--) {
+    matrix.push(new Array(w).fill(0));
   }
+  return matrix;
+}
 
-  if (rowCount > 0) {
-    const points = [0, 40, 100, 300, 1200][rowCount] * level;
-    score += points;
-    lines += rowCount;
-    level = 1 + Math.floor(lines / 10);
-    dropInterval = Math.max(120, 800 - (level - 1) * 60);
-    updateScore();
-
-    // ⚡ Satır başına 10 XP ver
-    if (window.__miniapp && typeof window.__miniapp.addXP === 'function') {
-      window.__miniapp.addXP(rowCount * 10);
-    }
+function createPiece(type) {
+  if (type === 'T') {
+    return [
+      [0, 0, 0],
+      [1, 1, 1],
+      [0, 1, 0],
+    ];
+  } else if (type === 'O') {
+    return [
+      [2, 2],
+      [2, 2],
+    ];
+  } else if (type === 'L') {
+    return [
+      [0, 3, 0],
+      [0, 3, 0],
+      [0, 3, 3],
+    ];
+  } else if (type === 'J') {
+    return [
+      [0, 4, 0],
+      [0, 4, 0],
+      [4, 4, 0],
+    ];
+  } else if (type === 'I') {
+    return [
+      [0, 5, 0, 0],
+      [0, 5, 0, 0],
+      [0, 5, 0, 0],
+      [0, 5, 0, 0],
+    ];
+  } else if (type === 'S') {
+    return [
+      [0, 6, 6],
+      [6, 6, 0],
+      [0, 0, 0],
+    ];
+  } else if (type === 'Z') {
+    return [
+      [7, 7, 0],
+      [0, 7, 7],
+      [0, 0, 0],
+    ];
   }
-}
-
-function drawMatrix(m, off) {
-  m.forEach((row,y)=>row.forEach((v,x)=>{
-    if(!v) return;
-    ctx.fillStyle = colors[v];
-    ctx.fillRect(x+off.x, y+off.y, 1, 1);
-    ctx.fillStyle = 'rgba(0,0,0,.15)';
-    ctx.fillRect(x+off.x, y+off.y, 1, 1);
-  }));
-}
-
-function drawArena() {
-  arena.forEach((row,y)=>row.forEach((v,x)=>{
-    if(v!==0){
-      ctx.fillStyle = colors[v];
-      ctx.fillRect(x,y,1,1);
-      ctx.fillStyle = 'rgba(0,0,0,.15)';
-      ctx.fillRect(x,y,1,1);
-    }
-  }));
 }
 
 function draw() {
-  ctx.fillStyle = '#0b1020';
-  ctx.fillRect(0,0,COLS,ROWS);
-  drawArena();
-  drawMatrix(current.matrix, {x:current.x, y:current.y});
+  context.fillStyle = '#000';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawMatrix(arena, {x:0, y:0});
+  drawMatrix(player.matrix, player.pos);
 }
 
-function update(time=0) {
-  const dt = time - lastTime; lastTime = time;
-  dropCounter += dt;
-  if (dropCounter > dropInterval) playerDrop();
-  draw();
-  requestAnimationFrame(update);
+function drawMatrix(matrix, offset) {
+  matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        context.fillStyle = colors[value];
+        context.fillRect(x + offset.x,
+                         y + offset.y,
+                         1, 1);
+      }
+    });
+  });
 }
 
-function resetPiece() {
-  current = randomPiece();
-  if (collide(arena,current)) {
-    arena.forEach(r=>r.fill(0));
-    score = 0; lines = 0; level = 1; dropInterval = 800;
-    updateScore();
-  }
+function merge(arena, player) {
+  player.matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        arena[y + player.pos.y][x + player.pos.x] = value;
+      }
+    });
+  });
 }
 
 function playerDrop() {
-  current.y++;
-  if (collide(arena,current)) {
-    current.y--;
-    merge(arena,current);
-    resetPiece();
-    clearLines();
+  player.pos.y++;
+  if (collide(arena, player)) {
+    player.pos.y--;
+    merge(arena, player);
+    playerReset();
+    arenaSweep();
   }
   dropCounter = 0;
 }
 
 function playerMove(dir) {
-  current.x += dir;
-  if (collide(arena,current)) current.x -= dir;
-}
-
-function playerRotate() {
-  const m = rotate(current.matrix);
-  const oldX = current.x;
-  current.matrix = m;
-  let offsets = [0,-1,1,-2,2];
-  for (let i=0;i<offsets.length;i++) {
-    current.x = oldX + offsets[i];
-    if (!collide(arena,current)) return;
+  player.pos.x += dir;
+  if (collide(arena, player)) {
+    player.pos.x -= dir;
   }
-  current.matrix = rotate(rotate(rotate(m)));
-  current.x = oldX;
 }
 
-function hardDrop() {
-  while(!collide(arena,current)) current.y++;
-  current.y--;
-  merge(arena,current);
-  resetPiece();
-  clearLines();
-  dropCounter = 0;
-}
-
-function updateScore(){
-  if (scoreEl) scoreEl.textContent = score;
-  if (linesEl) linesEl.textContent = lines;
-  if (levelEl) levelEl.textContent = level;
-}
-
-// Klavye: sayfa kaymasını engelle
-document.addEventListener('keydown', e=>{
-  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
-    e.preventDefault();
+function playerReset() {
+  const pieces = 'TJLOSZI';
+  player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
+  player.pos.y = 0;
+  player.pos.x = (arena[0].length / 2 | 0) -
+                 (player.matrix[0].length / 2 | 0);
+  if (collide(arena, player)) {
+    arena.forEach(row => row.fill(0));
+    score = 0;
+    lines = 0;
+    level = 1;
+    updateScore();
   }
-  if (e.key==='ArrowLeft') playerMove(-1);
-  else if (e.key==='ArrowRight') playerMove(1);
-  else if (e.key==='ArrowDown') playerDrop();
-  else if (e.key==='ArrowUp') playerRotate();
-  else if (e.code==='Space') hardDrop();
+}
+
+function playerRotate(dir) {
+  const pos = player.pos.x;
+  let offset = 1;
+  rotate(player.matrix, dir);
+  while (collide(arena, player)) {
+    player.pos.x += offset;
+    offset = -(offset + (offset > 0 ? 1 : -1));
+    if (offset > player.matrix[0].length) {
+      rotate(player.matrix, -dir);
+      player.pos.x = pos;
+      return;
+    }
+  }
+}
+
+function rotate(matrix, dir) {
+  for (let y = 0; y < matrix.length; ++y) {
+    for (let x = 0; x < y; ++x) {
+      [
+        matrix[x][y],
+        matrix[y][x],
+      ] = [
+        matrix[y][x],
+        matrix[x][y],
+      ];
+    }
+  }
+
+  if (dir > 0) {
+    matrix.forEach(row => row.reverse());
+  } else {
+    matrix.reverse();
+  }
+}
+
+let dropCounter = 0;
+let dropInterval = 1000;
+
+let lastTime = 0;
+function update(time = 0) {
+  const deltaTime = time - lastTime;
+  lastTime = time;
+
+  dropCounter += deltaTime;
+  if (dropCounter > dropInterval) {
+    playerDrop();
+  }
+
+  draw();
+  requestAnimationFrame(update);
+}
+
+function updateScore() {
+  document.getElementById('score').innerText = score;
+  document.getElementById('lines').innerText = lines;
+  document.getElementById('level').innerText = level;
+}
+
+document.addEventListener('keydown', event => {
+  if (event.keyCode === 37) {
+    playerMove(-1);
+  } else if (event.keyCode === 39) {
+    playerMove(1);
+  } else if (event.keyCode === 40) {
+    playerDrop();
+  } else if (event.keyCode === 81) {
+    playerRotate(-1);
+  } else if (event.keyCode === 87) {
+    playerRotate(1);
+  } else if (event.code === "Space") {
+    playerDrop();
+  }
 });
 
-// Start düğmesi varsa
-const startBtn = document.getElementById('startButton');
-if (startBtn) startBtn.onclick = () => { lastTime = 0; update(); };
+const colors = [
+  null,
+  '#FF0D72',
+  '#0DC2FF',
+  '#0DFF72',
+  '#F538FF',
+  '#FF8E0D',
+  '#FFE138',
+  '#3877FF',
+];
 
+const arena = createMatrix(12, 20);
+
+const player = {
+  pos: {x:0, y:0},
+  matrix: null,
+};
+
+document.getElementById('startButton').addEventListener('click', () => {
+  playerReset();
+  updateScore();
+  update();
+});
+
+playerReset();
 updateScore();
 update();

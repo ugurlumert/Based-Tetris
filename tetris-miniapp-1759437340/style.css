@@ -28,11 +28,11 @@ html, body {
 /* Container */
 .container{
   max-width: 960px;
-  margin: 12px auto;
-  padding: 12px;
+  margin: 8px auto;
+  padding: 8px;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: 12px;
   align-items: start;
   max-height: calc(100dvh - 48px);
   overflow: auto;
@@ -42,8 +42,8 @@ html, body {
 /* Masaüstünde iki sütun */
 @media (min-width: 820px){
   .container{
-    grid-template-columns: minmax(0, 420px) 280px;
-    gap: 20px;
+    grid-template-columns: minmax(0, 360px) 260px;
+    gap: 16px;
   }
 }
 
@@ -51,41 +51,41 @@ html, body {
 #tetris{
   display:block;
   width: 100%;
-  max-width: 280px;         /* dar panel için ideal */
+  max-width: 240px;         /* dar panel için daha küçük */
   aspect-ratio: 240 / 400;  /* orijinal en-boy oranı */
   height: auto;
   margin: 0 auto;
   background: #0b1224;
   border: 1px solid #22345e;
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0,0,0,.35);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.3);
 }
 
-/* Masaüstünde daha büyük canvas */
+/* Masaüstünde biraz daha büyük */
 @media (min-width: 820px){
-  #tetris{ max-width: 420px; }
+  #tetris{ max-width: 360px; }
 }
 
 /* Sağ panel */
 .side{
   background: #0b1224;
   border: 1px solid #22345e;
-  border-radius: 12px;
-  padding: 14px;
-  box-shadow: 0 6px 18px rgba(0,0,0,.3);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
 }
 
 .side h1{
   margin: 0 0 8px;
-  font-size: 20px;
+  font-size: 18px;
   letter-spacing: .3px;
 }
 
 .row{
   display:flex;
-  gap:8px;
+  gap:6px;
   flex-wrap: wrap;
-  margin: 8px 0 6px;
+  margin: 6px 0 6px;
 }
 
 button{
@@ -93,10 +93,11 @@ button{
   border: 1px solid #2a3f6e;
   background: #152449;
   color: #e6f0ff;
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+  font-size: 14px;
 }
 
 button:hover{
@@ -114,9 +115,10 @@ button:hover{
 #leaderboard{
   list-style: none;
   padding: 0;
-  margin: 8px 0 0;
+  margin: 6px 0 0;
 }
 #leaderboard li{
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-bottom: 1px solid #1e2f57;
+  font-size: 14px;
 }

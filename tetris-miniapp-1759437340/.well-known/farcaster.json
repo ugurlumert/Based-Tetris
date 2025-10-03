@@ -11,7 +11,7 @@
     "screenshotUrls": ["https://based-tetris.vercel.app/cover.png"],
     "heroImageUrl": "https://based-tetris.vercel.app/cover.png",
     "primaryCategory": "games",
-    "tags": ["tetris","game","base","onchain","xp"],
+    "tags": [],
     "ogTitle": "TetriTiny — Onchain Tetris",
     "ogDescription": "Play Tetris, earn XP on Base, and see your personal rank.",
     "ogImageUrl": "https://based-tetris.vercel.app/cover.png",

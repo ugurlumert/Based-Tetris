@@ -2,12 +2,14 @@
 html, body {
   height: 100%;
   margin: 0;
-  background: #0f172a; /* koyu lacivert */
+  background: #0f172a;
   color: #e5f0ff;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  /* Sayfa scroll'unu kapat – panel içinde taşma olmasın */
+  overflow: hidden;
 }
 
-/* Banner (üst kişisel rank) */
+/* Banner */
 .banner{
   width:100%;
   text-align:center;
@@ -24,7 +26,7 @@ html, body {
 
 .me{font-weight:700;color:#00ffcc}
 
-/* Kapsayıcı: küçük ekranda tek sütun, genişte iki sütun */
+/* Panel yüksekliğine uyum – içerik gerekirse kendi içinde scroll eder */
 .container{
   max-width: 960px;
   margin: 12px auto;
@@ -33,26 +35,53 @@ html, body {
   grid-template-columns: 1fr; /* default: tek sütun */
   gap: 16px;
   align-items: start;
+
+  /* Ekran içini taşırma – banner yüksekliğini düş */
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  scrollbar-gutter: stable both-edges;
 }
 
+/* Genişte iki sütun */
 @media (min-width: 820px){
   .container{
-    grid-template-columns: minmax(0, 640px) 280px; /* sol: canvas, sağ: panel */
+    grid-template-columns: minmax(0, 560px) 280px; /* sol: canvas, sağ: panel */
     gap: 20px;
   }
 }
 
-/* Canvas – ana tema olacak şekilde ortala ve büyüt */
+/* === Canvas boyutlandırma – taşmadan ideal görünüm ===
+   240x400 oranı (0.6) korunur. Genişliğe göre üst sınırlar: */
+:root{
+  --canvas-max-w-xs: 300px;  /* dar mini-app paneli */
+  --canvas-max-w-sm: 340px;  /* çoğu panel genişliği */
+  --canvas-max-w-lg: 560px;  /* masaüstü geniş */
+}
+
+/* Canvas – ana tema: ortala ve büyüt ama sınırlı */
 #tetris{
   display:block;
-  width: 100%;          /* CSS ile ölçekle */
-  max-width: 640px;     /* masaüstünde daha geniş */
-  height: auto;         /* en-boy oranını koru (240x400) */
+  width: 100%;
+  max-width: var(--canvas-max-w-sm);
+  height: auto;                     /* en-boy oranını koru */
   margin: 0 auto;
   background: #0b1224;
   border: 1px solid #22345e;
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0,0,0,.35);
+
+  /* Dikey taşmayı da sınırla: banner/padding düşülmüş yükseklik */
+  max-height: calc(100dvh - 160px);
+}
+
+/* Panel genişliği daha da darsa küçük üst sınır */
+@media (max-width: 480px){
+  #tetris{ max-width: var(--canvas-max-w-xs); }
+}
+
+/* 820+ px genişlikte daha büyük göster */
+@media (min-width: 820px){
+  #tetris{ max-width: var(--canvas-max-w-lg); }
 }
 
 /* Sağ panel (butonlar, skorlar) */
@@ -99,7 +128,7 @@ button:hover{
   #tetris{ order: 1; }
 }
 
-/* Liste (leaderboard) */
+/* Leaderboard */
 #leaderboard{
   list-style: none;
   padding: 0;

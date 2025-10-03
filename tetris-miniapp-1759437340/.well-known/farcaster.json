@@ -1,9 +1,17 @@
 {
   "name": "TetriTiny",
   "short_description": "A tiny Tetris you can play inside Farcaster Mini Apps.",
-  "description": "Tap to open and play. Wallet integration + XP leaderboard.",
+  "description": "Play Tetris, earn XP, and climb the leaderboard!",
   "icon": "https://based-tetris.vercel.app/icon.png",
-  "cover_image": "https://based-tetris.vercel.app/cover.png",
-  "website": "https://based-tetris.vercel.app/",
-  "app_version": "1.1.0"
+  "website": "https://based-tetris.vercel.app",
+  "app_version": "1.0.1",
+  "splash": {
+    "image": "https://based-tetris.vercel.app/splash.png",
+    "background_color": "#6200EA"
+  },
+  "social": {
+    "og_image": "https://based-tetris.vercel.app/splash.png",
+    "og_title": "TetriTiny",
+    "og_description": "Stack blocks. Earn XP. Compete with friends on Farcaster!"
+  }
 }

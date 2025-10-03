@@ -5,8 +5,7 @@ html, body {
   background: #0f172a;
   color: #e5f0ff;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  /* Sayfa scroll'unu kapat – panel içinde taşma olmasın */
-  overflow: hidden;
+  overflow: hidden; /* panelde scroll çıkmasın */
 }
 
 /* Banner */
@@ -26,65 +25,48 @@ html, body {
 
 .me{font-weight:700;color:#00ffcc}
 
-/* Panel yüksekliğine uyum – içerik gerekirse kendi içinde scroll eder */
+/* Container */
 .container{
   max-width: 960px;
   margin: 12px auto;
   padding: 12px;
   display: grid;
-  grid-template-columns: 1fr; /* default: tek sütun */
+  grid-template-columns: 1fr;
   gap: 16px;
   align-items: start;
-
-  /* Ekran içini taşırma – banner yüksekliğini düş */
   max-height: calc(100dvh - 48px);
   overflow: auto;
   scrollbar-gutter: stable both-edges;
 }
 
-/* Genişte iki sütun */
+/* Masaüstünde iki sütun */
 @media (min-width: 820px){
   .container{
-    grid-template-columns: minmax(0, 560px) 280px; /* sol: canvas, sağ: panel */
+    grid-template-columns: minmax(0, 420px) 280px;
     gap: 20px;
   }
 }
 
-/* === Canvas boyutlandırma – taşmadan ideal görünüm ===
-   240x400 oranı (0.6) korunur. Genişliğe göre üst sınırlar: */
-:root{
-  --canvas-max-w-xs: 300px;  /* dar mini-app paneli */
-  --canvas-max-w-sm: 340px;  /* çoğu panel genişliği */
-  --canvas-max-w-lg: 560px;  /* masaüstü geniş */
-}
-
-/* Canvas – ana tema: ortala ve büyüt ama sınırlı */
+/* === Canvas – orantılı görünüm === */
 #tetris{
   display:block;
   width: 100%;
-  max-width: var(--canvas-max-w-sm);
-  height: auto;                     /* en-boy oranını koru */
+  max-width: 280px;         /* dar panel için ideal */
+  aspect-ratio: 240 / 400;  /* orijinal en-boy oranı */
+  height: auto;
   margin: 0 auto;
   background: #0b1224;
   border: 1px solid #22345e;
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0,0,0,.35);
-
-  /* Dikey taşmayı da sınırla: banner/padding düşülmüş yükseklik */
-  max-height: calc(100dvh - 160px);
 }
 
-/* Panel genişliği daha da darsa küçük üst sınır */
-@media (max-width: 480px){
-  #tetris{ max-width: var(--canvas-max-w-xs); }
-}
-
-/* 820+ px genişlikte daha büyük göster */
+/* Masaüstünde daha büyük canvas */
 @media (min-width: 820px){
-  #tetris{ max-width: var(--canvas-max-w-lg); }
+  #tetris{ max-width: 420px; }
 }
 
-/* Sağ panel (butonlar, skorlar) */
+/* Sağ panel */
 .side{
   background: #0b1224;
   border: 1px solid #22345e;
@@ -122,7 +104,7 @@ button:hover{
   border-color:#3a58a0;
 }
 
-/* Küçük ekranda paneli alta, canvas'ı üste al */
+/* Küçük ekranda panel alta */
 @media (max-width: 819px){
   .side{ order: 2; }
   #tetris{ order: 1; }

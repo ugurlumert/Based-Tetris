@@ -1,20 +1,29 @@
 {
-  "miniapp": {
-    "version": "1",
+  "frame": {
     "name": "TetriTiny",
-    "subtitle": "Onchain Tetris. Earn XP.",
-    "description": "Play Tetris inside Farcaster. Earn XP on Base and track your personal rank.",
-    "homeUrl": "https://based-tetris.vercel.app/",
-    "iconUrl": "https://based-tetris.vercel.app/icon-1024.png",
+    "version": "1",
+    "iconUrl": "https://https://based-tetris.vercel.app//icon.png",
+    "homeUrl": "https://https://based-tetris.vercel.app/",
+    "imageUrl": "https://based-tetris.vercel.app/cover.png",
+    "buttonTitle": "Open TetriTiny",
     "splashImageUrl": "https://based-tetris.vercel.app/icon-200.png",
     "splashBackgroundColor": "#1E1E2F",
-    "screenshotUrls": ["https://based-tetris.vercel.app/cover.png"],
-    "heroImageUrl": "https://based-tetris.vercel.app/cover.png",
+    "subtitle": "Onchain Tetris. Earn XP.",
+    "description": "Play Tetris inside Farcaster. Earn XP on Base and track your personal rank.",
     "primaryCategory": "games",
-    "tags": [],
+    "screenshotUrls": [
+      "https://based-tetris.vercel.app/cover.png"
+    ],
+    "heroImageUrl": "https://based-tetris.vercel.app/cover.png",
+    "tagline": "Play. Earn XP on Base.",
     "ogTitle": "TetriTiny — Onchain Tetris",
     "ogDescription": "Play Tetris, earn XP on Base, and see your personal rank.",
     "ogImageUrl": "https://based-tetris.vercel.app/cover.png",
-    "requiredChains": ["eip155:8453"]
+    "castShareUrl": "https://warpcast.com/~/compose?text=Play%20TetriTiny&embeds[]=https://based-tetris.vercel.app/"
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjQ1OTQ0MCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweGJiYmRhMjc5NmE4OEU2NzM2QzUwMjJlMTAyOEM1NDlhNTBDZTY5QjYifQ",
+    "payload": "eyJkb21haW4iOiJodHRwczovL2Jhc2VkLXRldHJpcy52ZXJjZWwuYXBwLyJ9",
+    "signature": "aHbXyPpht+1kijy/itFtxQ9gmY7K1Q3+T8K5ZNTGYXtt3D3KpZQqKPYHdwzbcG1piGmjGJNQmgQiMREfk4h9lBs="
   }
 }

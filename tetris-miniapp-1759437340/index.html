@@ -3,8 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <title>TetriTiny</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Open Graph / Twitter Card -->
+  <meta property="og:title" content="TetriTiny - Onchain Tetris" />
+  <meta property="og:description" content="Play Tetris, earn XP, and see your personal rank. XP is recorded on Base." />
+  <meta property="og:image" content="https://based-tetris.vercel.app/cover.png" />
+  <meta property="og:url" content="https://based-tetris.vercel.app/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="TetriTiny - Onchain Tetris" />
+  <meta name="twitter:description" content="Play Tetris, earn XP, and see your personal rank. XP is recorded on Base." />
+  <meta name="twitter:image" content="https://based-tetris.vercel.app/cover.png" />
+
+  <!-- Icons -->
+  <link rel="icon" href="/icon.png" />
+  <link rel="apple-touch-icon" href="/icon.png" />
+
   <link rel="stylesheet" href="style.css" />
   <style>
+    /* küçük stil dokunuşu (gerekirse) */
     .banner{
       width:100%;text-align:center;padding:10px 12px;background:#12223d;color:#e6fbff;
       border-bottom:1px solid #2b3e69;font-weight:700;letter-spacing:.2px
@@ -13,7 +31,7 @@
   </style>
 </head>
 <body>
-  <!-- KİŞİSEL SIRALAMA BANTI -->
+  <!-- Kişisel Rank Banner -->
   <div id="myRankBanner" class="banner">Connect wallet to see your rank</div>
 
   <div class="container">
@@ -36,7 +54,6 @@
       <button id="finishButton">Finish</button>
 
       <h2>Your Rank</h2>
-      <!-- sadece senin satırın gösterilir -->
       <ul id="leaderboard"></ul>
     </div>
   </div>
@@ -51,7 +68,7 @@
   <script>
   (function(){
     const CONTRACT_ADDRESS = "0x1F268942987EE88397e6263b3Eff23a2840F31AD";
-    const DEPLOY_BLOCK     = 36327995; // Basescan'den aldığın deploy block
+    const DEPLOY_BLOCK     = 36327995; // Basescan deploy block
 
     const BASE_PARAMS = {
       chainId: '0x2105', // Base mainnet
@@ -67,10 +84,10 @@
     ];
 
     let currentAddress = null; // lowercased
-    let xp = 0;                // UI toplam (local cache)
-    let sessionXp = 0;         // bu oyun oturumunda kazanılan
+    let xp = 0;
+    let sessionXp = 0;
 
-    // ---------- CÜZDAN ----------
+    // -------- Wallet --------
     async function ensureBaseNetwork(provider){
       const chainId = await provider.send('eth_chainId', []);
       if (chainId !== BASE_PARAMS.chainId) {
@@ -103,7 +120,7 @@
       window.ethereum.on?.('chainChanged',   ()=>{ connectWallet().catch(console.error); });
     }
 
-    // ---------- XP (UI + localStorage) ----------
+    // -------- XP (UI + localStorage) --------
     function loadXPFromStorage(){
       if (!currentAddress) return;
       const saved = localStorage.getItem("xp_" + currentAddress);
@@ -123,7 +140,7 @@
       if (el) el.textContent = xp;
     }
 
-    // ---------- ON-CHAIN XP ----------
+    // -------- On-chain XP --------
     async function flushXP(){
       if (!currentAddress || sessionXp <= 0) return; // boş XP gönderme
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -135,7 +152,7 @@
       try{
         const tx = await contract.record(ethers.BigNumber.from(sessionXp), sessionId);
         await tx.wait();
-        sessionXp = 0;                // sadece oturum XP'si sıfırla
+        sessionXp = 0;
         await fetchAndRenderMyRank(); // TX sonrası rank güncelle
       }catch(e){
         console.error("record() failed:", e);
@@ -143,7 +160,7 @@
       }
     }
 
-    // ---------- FARCASTER HANDLE (Neynar) ----------
+    // -------- Farcaster handle (Neynar) --------
     async function getFarcasterHandle(addr){
       try{
         const resp = await fetch(`https://api.neynar.com/v2/farcaster/user-by-verification?address=${addr}`, {
@@ -158,7 +175,7 @@
       return null; // bulunamazsa kısa adres kullan
     }
 
-    // ---------- KİŞİSEL RANK ----------
+    // -------- Kişisel Rank --------
     async function fetchAndRenderMyRank(){
       const banner = document.getElementById("myRankBanner");
       const ul = document.getElementById("leaderboard");

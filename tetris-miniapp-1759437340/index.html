@@ -250,21 +250,28 @@
     // tetris.js erişsin
     window.__miniapp = { connectWallet, addXP, flushXP, fetchAndRenderMyRank };
   })();
-  <!-- Farcaster Mini App SDK + ready() -->
+<!-- Farcaster Mini App SDK + ready() (kopyala-yapıştır, </body>’den hemen önce) -->
 <script type="module">
   import { sdk } from 'https://esm.run/@farcaster/miniapp-sdk';
 
-  async function markReady() {
-    try { await sdk.actions.ready(); }
-    catch (e) { console.warn('miniapp ready() skipped:', e); }
-  }
+  // ready() sadece bir kez çağrılsın
+  const callReadyOnce = (() => {
+    let called = false;
+    return async () => {
+      if (called) return;
+      called = true;
+      try { await sdk.actions.ready(); }
+      catch (e) { console.warn('miniapp ready() skipped:', e); }
+    };
+  })();
 
+  // DOM hazırsa hemen, değilse hazır olunca; ayrıca 'load' konusunda da garantiye al
   if (document.readyState === 'loading') {
-    window.addEventListener('DOMContentLoaded', markReady, { once: true });
+    window.addEventListener('DOMContentLoaded', callReadyOnce, { once: true });
   } else {
-    // DOM zaten hazırsa bekleme, hemen çağır
-    markReady();
+    callReadyOnce();
   }
+  window.addEventListener('load', callReadyOnce, { once: true });
 </script>
 </body>
 </html>

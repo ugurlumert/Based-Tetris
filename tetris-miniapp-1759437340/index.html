@@ -17,11 +17,19 @@
   <meta name="twitter:image" content="https://based-tetris.vercel.app/cover.png" />
 
   <!-- Icons -->
-  <link rel="icon" href="/icon.png" />
-  <link rel="apple-touch-icon" href="/icon.png" />
+  <link rel="icon" href="/icon-1024.png" />
+  <link rel="apple-touch-icon" href="/icon-1024.png" />
 
   <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ufak banner dokunuşu */
+    .banner{
+      width:100%;text-align:center;padding:10px 12px;background:#12223d;color:#e6fbff;
+      border-bottom:1px solid #2b3e69;font-weight:700;letter-spacing:.2px
+    }
+    .me{font-weight:700;color:#00ffcc}
+  </style>
 </head>
 <body>
   <!-- Kişisel Rank Banner -->
@@ -202,7 +210,6 @@
         for (const addr of players){
           try{
             const xpVal = await contract.totalXp(addr);
-            // toNumber overflow riskine karşı string'e çevirip sonra Number'a düşebilirsin
             const xpNum = (()=>{ try { return xpVal.toNumber(); } catch(_) { return Number(xpVal.toString()); }})();
             all.push({ address: addr, xp: xpNum });
           }catch(e){
@@ -230,12 +237,16 @@
       }catch(e){
         console.error("my-rank fatal:", e);
         const short = currentAddress ? (currentAddress.slice(0,6)+"..."+currentAddress.slice(-4)) : "you";
-        document.getElementById("leaderboard").innerHTML = "";
-        const li = document.createElement("li");
-        li.className = "me";
-        li.textContent = `#1 ${short} — 0 XP (You)`;
-        document.getElementById("leaderboard").appendChild(li);
-        document.getElementById("myRankBanner").textContent = `You — 0 XP (${short})`;
+        const bannerEl = document.getElementById("myRankBanner");
+        if (bannerEl) bannerEl.textContent = `You — 0 XP (${short})`;
+        const ulEl = document.getElementById("leaderboard");
+        if (ulEl){
+          ulEl.innerHTML = "";
+          const li = document.createElement("li");
+          li.className = "me";
+          li.textContent = `#1 ${short} — 0 XP (You)`;
+          ulEl.appendChild(li);
+        }
       }
     }
 
@@ -250,25 +261,52 @@
     // tetris.js erişsin
     window.__miniapp = { connectWallet, addXP, flushXP, fetchAndRenderMyRank };
   })();
-<!-- Farcaster Mini App SDK + ready() -->
-<script type="module">
-  import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
+  </script>
 
-  const callReadyOnce = (() => {
-    let called = false;
-    return async () => {
-      if (called) return; called = true;
-      try { await sdk.actions.ready(); }
-      catch (e) { console.warn('miniapp ready() skipped:', e); }
-    };
-  })();
+  <!-- Farcaster Mini App SDK + ready() (esm.sh) + büyük splash -->
+  <script type="module">
+    import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
 
-  if (document.readyState === 'loading') {
-    window.addEventListener('DOMContentLoaded', callReadyOnce, { once: true });
-  } else {
-    callReadyOnce();
-  }
-  window.addEventListener('load', callReadyOnce, { once: true });
-</script>
+    // Büyük splash overlay göster & kısa süre sonra kapat
+    function showBigSplash() {
+      // CSS
+      const css = document.createElement('style');
+      css.textContent = `
+        #appSplash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#1E1E2F;opacity:1}
+        #appSplash::before{content:"";position:absolute;inset:0;background:url('/splash.png') center/cover no-repeat}
+        #appSplash.fade{opacity:0;transition:opacity .35s ease}
+      `;
+      document.head.appendChild(css);
+
+      // Overlay
+      const el = document.createElement('div');
+      el.id = 'appSplash';
+      document.body.appendChild(el);
+
+      // 1.2s sonra yumuşak kapan
+      setTimeout(() => {
+        el.classList.add('fade');
+        setTimeout(() => el.remove(), 380);
+      }, 1200);
+    }
+
+    // ready()'yi kesin olarak 1 kez çağır
+    const callReadyOnce = (() => {
+      let called = false;
+      return async () => {
+        if (called) return; called = true;
+        try { await sdk.actions.ready(); }
+        catch (e) { console.warn('miniapp ready() skipped:', e); }
+        finally { showBigSplash(); }
+      };
+    })();
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', callReadyOnce, { once: true });
+    } else {
+      callReadyOnce();
+    }
+    window.addEventListener('load', callReadyOnce, { once: true });
+  </script>
 </body>
 </html>

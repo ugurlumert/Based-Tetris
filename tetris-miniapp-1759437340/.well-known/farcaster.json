@@ -11,5 +11,10 @@
     "primaryCategory": "games",
     "screenshotUrls": ["https://based-tetris.vercel.app/cover.png"],
     "requiredChains": ["eip155:8453"]
+  {
+  "accountAssociation": {
+    "header": "eyJmaWQiOjQ1OTQ0MCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDkwMjdjMjUxNTNCYjk5YzZkZWJBRTkzQWFCREEwNzlkRUJiM2Y5OTMifQ",
+    "payload": "eyJkb21haW4iOiJiYXNlZC10ZXRyaXMudmVyY2VsLmFwcCJ9",
+    "signature": "MHg3ZWViNGNmY2NhZDBlYjdjNTU2YWJmZTRjMGVkMzZmYmVjYmVhNWM4NjI4MjgwYTVlYzUyYWI5YzVlNTMyYmVjNTU0MGIyM2ViMWJkMmU2NGY5ZTQ2ZDdjYmI1NDQ1MWIyMmI0YWMwMWIxMWVjNjVlYTI3ZjAxOGRkZDE1NWMzYTFi"
   }
 }

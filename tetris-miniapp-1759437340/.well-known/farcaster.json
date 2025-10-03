@@ -1,8 +1,9 @@
 {
   "name": "TetriTiny",
-  "short_description": "Base üzerinde küçük bir Tetris. XP kazan, cüzdanına yaz.",
-  "description": "Satır kır, XP kazan; XP'yi Base mainnet kontratına kaydet. Cüzdan bağlanınca kişisel sıralaman görünür.",
+  "short_description": "A tiny Tetris you can play inside Farcaster Mini Apps.",
+  "description": "Tap to open and play. Wallet integration + XP leaderboard.",
   "icon": "https://based-tetris.vercel.app/icon.png",
+  "cover_image": "https://based-tetris.vercel.app/cover.png",
   "website": "https://based-tetris.vercel.app/",
-  "app_version": "1.2.0"
+  "app_version": "1.1.0"
 }

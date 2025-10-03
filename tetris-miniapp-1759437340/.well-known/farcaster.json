@@ -1,17 +1,9 @@
 {
   "name": "TetriTiny",
-  "short_description": "A tiny Tetris you can play inside Farcaster Mini Apps.",
-  "description": "Play Tetris, earn XP, and climb the leaderboard!",
+  "short_description": "Onchain Tetris. Earn XP.",
+  "description": "Play Tetris inside Farcaster. Earn XP on Base and see your personal rank.",
   "icon": "https://based-tetris.vercel.app/icon.png",
-  "website": "https://based-tetris.vercel.app",
-  "app_version": "1.0.1",
-  "splash": {
-    "image": "https://based-tetris.vercel.app/splash.png",
-    "background_color": "#6200EA"
-  },
-  "social": {
-    "og_image": "https://based-tetris.vercel.app/splash.png",
-    "og_title": "TetriTiny",
-    "og_description": "Stack blocks. Earn XP. Compete with friends on Farcaster!"
-  }
+  "cover_image": "https://based-tetris.vercel.app/cover.png",
+  "website": "https://based-tetris.vercel.app/",
+  "app_version": "1.2.0"
 }

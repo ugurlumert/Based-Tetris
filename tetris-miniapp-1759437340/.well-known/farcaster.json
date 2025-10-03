@@ -11,7 +11,7 @@
     "primaryCategory": "games",
     "screenshotUrls": ["https://based-tetris.vercel.app/cover.png"],
     "requiredChains": ["eip155:8453"]
-  {
+  },
   "accountAssociation": {
     "header": "eyJmaWQiOjQ1OTQ0MCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDkwMjdjMjUxNTNCYjk5YzZkZWJBRTkzQWFCREEwNzlkRUJiM2Y5OTMifQ",
     "payload": "eyJkb21haW4iOiJiYXNlZC10ZXRyaXMudmVyY2VsLmFwcCJ9",

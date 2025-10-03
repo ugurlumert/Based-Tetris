@@ -1,12 +1,20 @@
 {
-  "cleanUrls": true,
   "headers": [
     {
       "source": "/.well-known/farcaster.json",
       "headers": [
         {
-          "key": "Content-Type",
-          "value": "application/json"
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(icon|cover|splash).png",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=60, must-revalidate"
         }
       ]
     }

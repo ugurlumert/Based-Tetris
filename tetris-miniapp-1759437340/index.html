@@ -250,42 +250,16 @@
     // tetris.js erişsin
     window.__miniapp = { connectWallet, addXP, flushXP, fetchAndRenderMyRank };
   })();
-<!-- Farcaster ready + TAM EKRAN açılış splash (splash.png) -->
+<!-- Farcaster Mini App SDK + ready() -->
 <script type="module">
-  import { sdk } from 'https://esm.run/@farcaster/miniapp-sdk';
+  import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
 
-  // Stil + overlay
-  const css = document.createElement('style');
-  css.textContent = `
-    #appSplash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#1E1E2F;opacity:1}
-    /* 'cover' = tam ekran dolsun (biraz kırpabilir). 'contain' istersen alttaki satırda cover'ı contain yap. */
-    #appSplash::before{content:"";position:absolute;inset:0;background:url('/splash.png') center/cover no-repeat}
-    #appSplash.fade{opacity:0;transition:opacity .35s ease}
-    body.splashLock{overflow:hidden}
-  `;
-  document.head.appendChild(css);
-
-  const splash = document.createElement('div');
-  splash.id = 'appSplash';
-  document.body.appendChild(splash);
-  document.body.classList.add('splashLock');
-
-  const hideSplash = () => {
-    splash.classList.add('fade');
-    setTimeout(() => {
-      splash.remove();
-      document.body.classList.remove('splashLock');
-    }, 380);
-  };
-
-  // ready() çağrısı – başarı/başarısızlıkta da splash'i kapat
   const callReadyOnce = (() => {
     let called = false;
     return async () => {
       if (called) return; called = true;
       try { await sdk.actions.ready(); }
       catch (e) { console.warn('miniapp ready() skipped:', e); }
-      finally { hideSplash(); }
     };
   })();
 
@@ -294,9 +268,7 @@
   } else {
     callReadyOnce();
   }
-
-  // Mini app dışında açılırsa güvenli çıkış: 1.2s sonra otomatik gizle
-  window.addEventListener('load', () => setTimeout(hideSplash, 1200), { once: true });
+  window.addEventListener('load', callReadyOnce, { once: true });
 </script>
 </body>
 </html>

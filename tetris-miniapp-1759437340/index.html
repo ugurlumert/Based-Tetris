@@ -20,15 +20,8 @@
   <link rel="icon" href="/icon.png" />
   <link rel="apple-touch-icon" href="/icon.png" />
 
+  <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
-  <style>
-    /* küçük stil dokunuşu (gerekirse) */
-    .banner{
-      width:100%;text-align:center;padding:10px 12px;background:#12223d;color:#e6fbff;
-      border-bottom:1px solid #2b3e69;font-weight:700;letter-spacing:.2px
-    }
-    .me{font-weight:700;color:#00ffcc}
-  </style>
 </head>
 <body>
   <!-- Kişisel Rank Banner -->
@@ -42,16 +35,16 @@
 
       <div class="row">
         <button id="connect">🔗 Connect Wallet</button>
+        <button id="startButton">Start</button>
+        <button id="finishButton">Finish</button>
       </div>
+
       <p>Address: <span id="addr">Not connected</span></p>
       <p>XP: <span id="xp">0</span></p>
 
       <p>Score: <span id="score">0</span></p>
       <p>Lines: <span id="lines">0</span></p>
       <p>Level: <span id="level">1</span></p>
-
-      <button id="startButton">Start</button>
-      <button id="finishButton">Finish</button>
 
       <h2>Your Rank</h2>
       <ul id="leaderboard"></ul>
@@ -209,7 +202,9 @@
         for (const addr of players){
           try{
             const xpVal = await contract.totalXp(addr);
-            all.push({ address: addr, xp: xpVal.toNumber() });
+            // toNumber overflow riskine karşı string'e çevirip sonra Number'a düşebilirsin
+            const xpNum = (()=>{ try { return xpVal.toNumber(); } catch(_) { return Number(xpVal.toString()); }})();
+            all.push({ address: addr, xp: xpNum });
           }catch(e){
             console.warn("totalXp read failed for", addr, e);
             all.push({ address: addr, xp: 0 });
@@ -234,17 +229,20 @@
         }
       }catch(e){
         console.error("my-rank fatal:", e);
-        const short = currentAddress.slice(0,6)+"..."+currentAddress.slice(-4);
-        banner.textContent = `You — 0 XP (${short})`;
-        if (ul){
-          ul.innerHTML = "";
-          const li = document.createElement("li");
-          li.className = "me";
-          li.textContent = `#1 ${short} — 0 XP (You)`;
-          ul.appendChild(li);
-        }
+        const short = currentAddress ? (currentAddress.slice(0,6)+"..."+currentAddress.slice(-4)) : "you";
+        document.getElementById("leaderboard").innerHTML = "";
+        const li = document.createElement("li");
+        li.className = "me";
+        li.textContent = `#1 ${short} — 0 XP (You)`;
+        document.getElementById("leaderboard").appendChild(li);
+        document.getElementById("myRankBanner").textContent = `You — 0 XP (${short})`;
       }
     }
+
+    // space tuşunda sayfa kaydırmayı engelle (oyun odaklı)
+    window.addEventListener('keydown', (e)=>{
+      if (e.code === 'Space' || e.keyCode === 32) e.preventDefault();
+    }, { passive:false });
 
     // sayfa açılınca dene (bağlı cüzdan yoksa banner bağlanınca güncellenir)
     window.addEventListener("load", fetchAndRenderMyRank);
@@ -252,6 +250,21 @@
     // tetris.js erişsin
     window.__miniapp = { connectWallet, addXP, flushXP, fetchAndRenderMyRank };
   })();
+  </script>
+
+  <!-- Farcaster Mini App SDK + ready() (splash'i kapatır) -->
+  <script type="module">
+    import { sdk } from 'https://esm.run/@farcaster/miniapp-sdk';
+
+    // DOM hazır olduğunda Farcaster'a "hazırım" sinyali ver
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await sdk.actions.ready();
+      } catch (e) {
+        // Mini App dışı (normal tarayıcı) durumda sessizce geç
+        console.warn('miniapp ready() skipped:', e);
+      }
+    });
   </script>
 </body>
 </html>

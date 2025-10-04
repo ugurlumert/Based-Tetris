@@ -14,6 +14,8 @@
     "ogTitle": "TetriTiny — Onchain Tetris",
     "ogDescription": "Play Tetris, earn XP on Base, and see your personal rank.",
     "ogImageUrl": "https://based-tetris.vercel.app/cover.png",
+    "tags": ["tetris"],
+    "castShareUrl": "https://warpcast.com/~/compose?text=Play%20TetriTiny&embeds[]=https://based-tetris.vercel.app/"
     "requiredChains": ["eip155:8453"]
   },
   "accountAssociation": {

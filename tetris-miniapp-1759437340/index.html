@@ -25,12 +25,12 @@
   <link rel="icon" href="/icon.png" />
   <link rel="apple-touch-icon" href="/icon-1024.png" />
 
-  <!-- Base styles (opsiyonel) -->
+  <!-- (opsiyonel) harici stilin varsa kalabilir -->
   <link rel="stylesheet" href="style.css" />
 
   <style>
     :root { --card-w: clamp(320px, 86vw, 480px); }
-    html, body { background: #0f1b2d; color:#e6fbff; margin:0; padding:0; }
+    html, body { background:#0f1b2d; color:#e6fbff; margin:0; padding:0; }
     .banner{
       width:100%; text-align:center; padding:10px 12px; background:#12223d; color:#e6fbff;
       border-bottom:1px solid #2b3e69; font-weight:700; letter-spacing:.2px
@@ -38,56 +38,64 @@
     .me{font-weight:700;color:#00ffcc}
     .container{
       max-width: var(--card-w);
-      margin: 14px auto 24px;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
-      padding: 0 10px;
+      margin: 14px auto 88px; /* alttaki kontrol barına yer bırak */
+      display: grid; gap: 14px; padding: 0 10px;
     }
     .game-card{
       background:#0d1626; border:1px solid #233452; border-radius:14px; padding:14px;
       box-shadow: 0 8px 24px rgba(0,0,0,.25);
     }
-    /* Canvas keeps its aspect ratio (240x400) and scales responsively */
+    /* Canvas responsive */
     #tetris{
-      display:block;
-      width:100%;
-      height:auto;           /* keep aspect ratio – no stretching */
-      border-radius:10px;
-      background:#091426;
-      touch-action: none;    /* mobil jestler için */
+      display:block; width:100%; height:auto; border-radius:10px; background:#091426;
+      touch-action:none; /* jestler için tarayıcı hareketlerini kapat */
     }
-    .side h1{ margin: 8px 0 12px; font-size: 28px; }
+    .side h1{ margin:8px 0 12px; font-size:28px; }
     .row{ display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 10px; align-items:center }
     button{
       appearance:none; border:none; border-radius:10px; padding:10px 14px;
       background:#1b2a45; color:#e6fbff; font-weight:600; cursor:pointer;
-      box-shadow: inset 0 0 0 1px #2b3e69;
+      box-shadow: inset 0 0 0 1px #2b3e69; touch-action:manipulation;
     }
     button:hover{ background:#20355a; }
     .stats p{ margin:4px 0; }
     ul#leaderboard{ margin:8px 0 0; padding:0 0 0 16px; }
 
-    /* Timer pill */
+    /* Countdown pill */
     .timer{
-      margin-left:auto;
-      padding:8px 12px;
-      border-radius:999px;
-      background:#172746;
-      border:1px solid #2b3e69;
-      font-weight:700;
-      letter-spacing:.3px;
-      min-width:88px;
-      text-align:center;
-      user-select:none;
+      margin-left:auto; padding:8px 12px; border-radius:999px;
+      background:#172746; border:1px solid #2b3e69; font-weight:700;
+      letter-spacing:.3px; min-width:88px; text-align:center; user-select:none;
     }
     .timer.warn{ background:#2a1e1e; border-color:#6b2b2b }
+
+    /* Mobile control bar (only on touch devices) */
+    .mobile-controls{
+      position:fixed; left:0; right:0; bottom:0;
+      padding: max(8px, env(safe-area-inset-bottom)) 12px 12px 12px;
+      background: linear-gradient(180deg, rgba(10,16,28,.0), rgba(10,16,28,.85) 30%, rgba(10,16,28,.95));
+      border-top:1px solid #233452; backdrop-filter: blur(6px);
+      display:none; /* default kapalı; touch'ta açacağız */
+      z-index: 50;
+    }
+    .mobile-controls .grid{
+      max-width: var(--card-w); margin:0 auto;
+      display:grid; grid-template-columns: repeat(5,1fr); gap:10px;
+    }
+    .ctrl {
+      border:1px solid #2b3e69; border-radius:14px; padding:12px; text-align:center;
+      background:#0d1626; font-size:18px; font-weight:800; user-select:none;
+      touch-action:manipulation;
+    }
+    .ctrl:active{ transform: translateY(1px); }
+    .ctrl.small{ font-size:16px }
+    /* Sadece kaba işaretçi (parmak) cihazlarda göster */
+    @media (pointer:coarse){ .mobile-controls{ display:block; } }
   </style>
 
   <!-- Farcaster Mini Apps SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@farcaster/mini-apps-sdk@latest/dist/browser/mini-apps-sdk.umd.js"></script>
   <script>
-    // Call ready() safely across SDK variants
     function fcReady() {
       const cands = [
         window?.FarcasterMiniAppsSDK?.actions,
@@ -98,17 +106,13 @@
       for (const a of cands) { try { if (a && typeof a.ready === 'function') { a.ready(); break; } } catch(_){} }
     }
     document.addEventListener('DOMContentLoaded', () => setTimeout(fcReady, 0));
-
     // Klavye ile oynarken sayfa kaymasını engelle
     window.addEventListener('keydown', (e)=>{
-      if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
-        e.preventDefault();
-      }
+      if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
     }, { passive:false });
   </script>
 </head>
 <body>
-  <!-- Personal Rank Banner -->
   <div id="myRankBanner" class="banner">Connect wallet to see your rank</div>
 
   <div class="container">
@@ -118,12 +122,10 @@
 
     <div class="side game-card">
       <h1>TetriTiny</h1>
-
       <div class="row">
         <button id="connect">🔗 Connect Wallet</button>
         <button id="startButton">Start</button>
         <button id="finishButton">Finish</button>
-
         <!-- COUNTDOWN -->
         <div id="countdown" class="timer" aria-live="polite" title="Time Left">⏱ 01:00</div>
       </div>
@@ -141,20 +143,31 @@
     </div>
   </div>
 
+  <!-- MOBILE CONTROL BAR -->
+  <div class="mobile-controls" id="mobileControls" aria-label="Touch controls">
+    <div class="grid">
+      <div class="ctrl" data-key="ArrowLeft">◀</div>
+      <div class="ctrl" data-key="ArrowRight">▶</div>
+      <div class="ctrl" data-key="ArrowUp" title="Rotate">⟳</div>
+      <div class="ctrl" data-key="ArrowDown" title="Soft drop">⬇</div>
+      <div class="ctrl small" data-key="Space" title="Hard drop">⬇⬇</div>
+    </div>
+  </div>
+
   <!-- Game core -->
   <script src="tetris.js"></script>
 
   <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-  <!-- Wallet + XP + Rank + Touch + Turbo + Countdown -->
+  <!-- Wallet + XP + Rank + Touch + Turbo + Countdown + On-screen controls -->
   <script>
   (function(){
     const CONTRACT_ADDRESS = "0x1F268942987EE88397e6263b3Eff23a2840F31AD";
     const DEPLOY_BLOCK     = 36327995; // Basescan deploy block
 
     const BASE_PARAMS = {
-      chainId: '0x2105', // Base mainnet
+      chainId: '0x2105',
       chainName: 'Base Mainnet',
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
       rpcUrls: ['https://base.llamarpc.com'],
@@ -167,23 +180,27 @@
     ];
 
     let currentAddress = null; // lowercased
-    let xp = 0;
-    let sessionXp = 0;
+    let xp = 0, sessionXp = 0;
 
-    // -------- Wallet --------
+    /* ---------- utils ---------- */
+    function synthKey(key){
+      const ev = new KeyboardEvent('keydown', { key, code:key, bubbles:true });
+      window.dispatchEvent(ev); document.dispatchEvent(ev);
+    }
+    function vibrate(ms){ try{ navigator.vibrate?.(ms); }catch(_){} }
+
+    /* ---------- wallet ---------- */
     async function ensureBaseNetwork(provider){
       const chainId = await provider.send('eth_chainId', []);
       if (chainId !== BASE_PARAMS.chainId) {
-        try{
-          await provider.send('wallet_switchEthereumChain', [{ chainId: BASE_PARAMS.chainId }]);
-        }catch(e){
+        try{ await provider.send('wallet_switchEthereumChain', [{ chainId: BASE_PARAMS.chainId }]); }
+        catch(e){
           if (e.code === 4902 || String(e.message||'').includes('Unrecognized chain ID')){
             await provider.send('wallet_addEthereumChain', [BASE_PARAMS]);
           } else { throw e; }
         }
       }
     }
-
     async function connectWallet(){
       if (!window.ethereum){ alert("MetaMask / Coinbase Wallet gerekiyor."); throw new Error("no-ethereum"); }
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -196,54 +213,43 @@
       loadXPFromStorage();
       fetchAndRenderMyRank().catch(console.error);
     }
-
     document.getElementById("connect").addEventListener("click", ()=>{ connectWallet().catch(console.error); });
     if (window.ethereum){
       window.ethereum.on?.('accountsChanged', ()=>{ connectWallet().catch(console.error); });
       window.ethereum.on?.('chainChanged',   ()=>{ connectWallet().catch(console.error); });
     }
 
-    // -------- XP (UI + localStorage) --------
+    /* ---------- XP (UI + localStorage) ---------- */
     function loadXPFromStorage(){
       if (!currentAddress) return;
       const saved = localStorage.getItem("xp_" + currentAddress);
-      xp = saved ? parseInt(saved,10) : 0;
-      updateXPUI();
+      xp = saved ? parseInt(saved,10) : 0; updateXPUI();
     }
     function addXP(amount){
-      sessionXp += amount;
-      xp += amount;
-      if (currentAddress){
-        localStorage.setItem("xp_" + currentAddress, String(xp));
-      }
+      sessionXp += amount; xp += amount;
+      if (currentAddress){ localStorage.setItem("xp_" + currentAddress, String(xp)); }
       updateXPUI();
     }
-    function updateXPUI(){
-      const el = document.getElementById("xp");
-      if (el) el.textContent = xp;
-    }
+    function updateXPUI(){ const el = document.getElementById("xp"); if (el) el.textContent = xp; }
 
-    // -------- On-chain XP --------
+    /* ---------- On-chain XP ---------- */
     async function flushXP(){
       if (!currentAddress || sessionXp <= 0) return;
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       await ensureBaseNetwork(provider);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-
       const sessionId = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       try{
         const tx = await contract.record(ethers.BigNumber.from(sessionXp), sessionId);
-        await tx.wait();
-        sessionXp = 0;
-        await fetchAndRenderMyRank();
+        await tx.wait(); sessionXp = 0; await fetchAndRenderMyRank();
       }catch(e){
         console.error("record() failed:", e);
         alert("XP kaydedilemedi: " + (e?.data?.message || e?.message || e));
       }
     }
 
-    // -------- Farcaster handle (Neynar) --------
+    /* ---------- Farcaster handle ---------- */
     async function getFarcasterHandle(addr){
       try{
         const resp = await fetch(`https://api.neynar.com/v2/farcaster/user-by-verification?address=${addr}`, {
@@ -252,38 +258,27 @@
         if (!resp.ok) throw new Error("neynar http " + resp.status);
         const data = await resp.json();
         if (data?.result?.user?.username) return "@"+data.result.user.username;
-      }catch(e){
-        console.warn("farcaster lookup failed, fallback to address", e);
-      }
+      }catch(e){ console.warn("farcaster lookup failed", e); }
       return null;
     }
 
-    // -------- Kişisel Rank --------
+    /* ---------- Rank ---------- */
     async function fetchAndRenderMyRank(){
       const banner = document.getElementById("myRankBanner");
       const ul = document.getElementById("leaderboard");
       banner.textContent = "Loading your rank…";
-
-      if (!currentAddress){
-        banner.textContent = "Connect wallet to see your rank";
-        ul && (ul.innerHTML = "");
-        return;
-      }
+      if (!currentAddress){ banner.textContent = "Connect wallet to see your rank"; ul && (ul.innerHTML=""); return; }
 
       try{
         const provider = new ethers.providers.JsonRpcProvider("https://base.llamarpc.com");
         const contract  = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-
         const currentBlock = await provider.getBlockNumber();
 
         let players = new Set();
         try{
           const events = await contract.queryFilter("XpRecorded", DEPLOY_BLOCK, currentBlock);
           events.forEach(ev => players.add(ev.args.player.toLowerCase()));
-        }catch(e){
-          console.warn("queryFilter failed, continue with self only", e);
-        }
-
+        }catch(e){ console.warn("queryFilter failed", e); }
         players.add(currentAddress);
 
         const all = [];
@@ -291,12 +286,8 @@
           try{
             const xpVal = await contract.totalXp(addr);
             all.push({ address: addr, xp: xpVal.toNumber() });
-          }catch(e){
-            console.warn("totalXp read failed for", addr, e);
-            all.push({ address: addr, xp: 0 });
-          }
+          }catch(e){ all.push({ address: addr, xp: 0 }); }
         }
-
         all.sort((a,b)=>b.xp - a.xp);
         const myIndex = all.findIndex(x => x.address === currentAddress);
         const myXp    = (myIndex >= 0 ? all[myIndex].xp : 0);
@@ -305,7 +296,6 @@
         const myName  = handle ? handle : (currentAddress.slice(0,6)+"..."+currentAddress.slice(-4));
 
         banner.textContent = `You’re #${myIndex+1} — ${myXp} XP ${handle ? "(" + handle + ")" : ""}`;
-
         if (ul){
           ul.innerHTML = "";
           const li = document.createElement("li");
@@ -326,73 +316,33 @@
         }
       }
     }
+    window.addEventListener("load", fetchAndRenderMyRank);
 
-    // ---- TOUCH / SWIPE KONTROLLERİ ----
-    (function enableTouchControls(){
-      const HARD_DROP_ON_SWIPE_UP = false; // true yaparsan yukarı swipe = hard drop
+    /* ---------- Touch gestures on canvas ---------- */
+    (function enableTouchGestures(){
+      const HARD_DROP_ON_SWIPE_UP = false;
       const el = document.getElementById('tetris');
-
-      const TAP_MAX_TIME_MS = 250;
-      const TAP_MAX_MOVE_PX = 12;
-      const STEP_PX = 24;
-      const opts = { passive: false };
-
+      const TAP_MAX_TIME_MS = 250, TAP_MAX_MOVE_PX = 12, STEP_PX = 24;
+      const opts = { passive:false };
       let sx=0, sy=0, lx=0, ly=0, start=0, moved=false;
 
-      function synthKey(key){
-        const evt = new KeyboardEvent('keydown', { key, code: key, bubbles: true });
-        window.dispatchEvent(evt);
-        document.dispatchEvent(evt);
-      }
-
-      function onStart(e){
-        const p = e.touches ? e.touches[0] : e;
-        sx = lx = p.clientX;
-        sy = ly = p.clientY;
-        start = performance.now();
-        moved = false;
-      }
-
+      function onStart(e){ const p=(e.touches?e.touches[0]:e); sx=lx=p.clientX; sy=ly=p.clientY; start=performance.now(); moved=false; }
       function onMove(e){
-        const p = e.touches ? e.touches[0] : e;
-        const dx = p.clientX - lx;
-        const dy = p.clientY - ly;
-
-        const stepsX = Math.trunc(dx / STEP_PX);
-        if (stepsX !== 0){
-          for (let i=0;i<Math.abs(stepsX);i++){
-            synthKey(stepsX > 0 ? 'ArrowRight' : 'ArrowLeft');
-          }
-          lx += stepsX * STEP_PX;
-          moved = true;
-        }
-
-        const stepsDown = Math.trunc((p.clientY - ly) / STEP_PX);
-        if (stepsDown > 0){
-          for (let i=0;i<stepsDown;i++) synthKey('ArrowDown');
-          ly += stepsDown * STEP_PX;
-          moved = true;
-        }
-
-        if (HARD_DROP_ON_SWIPE_UP){
-          const stepsUp = Math.trunc((ly - p.clientY) / (STEP_PX*2));
-          if (stepsUp > 0){
-            synthKey('Space');
-            lx = p.clientX; ly = p.clientY; moved = true;
-          }
+        const p=(e.touches?e.touches[0]:e), dx=p.clientX-lx, dy=p.clientY-ly;
+        const stepsX=Math.trunc(dx/STEP_PX);
+        if(stepsX!==0){ for(let i=0;i<Math.abs(stepsX);i++) synthKey(stepsX>0?'ArrowRight':'ArrowLeft'); lx+=stepsX*STEP_PX; moved=true; }
+        const stepsDown=Math.trunc((p.clientY-ly)/STEP_PX);
+        if(stepsDown>0){ for(let i=0;i<stepsDown;i++) synthKey('ArrowDown'); ly+=stepsDown*STEP_PX; moved=true; }
+        if(HARD_DROP_ON_SWIPE_UP){
+          const stepsUp=Math.trunc((ly-p.clientY)/(STEP_PX*2));
+          if(stepsUp>0){ synthKey('Space'); lx=p.clientX; ly=p.clientY; moved=true; }
         }
         e.preventDefault();
       }
-
       function onEnd(){
-        const dt = performance.now() - start;
-        const totalDx = Math.abs(lx - sx);
-        const totalDy = Math.abs(ly - sy);
-        if (!moved && dt <= TAP_MAX_TIME_MS && totalDx <= TAP_MAX_MOVE_PX && totalDy <= TAP_MAX_MOVE_PX){
-          synthKey('ArrowUp'); // rotate
-        }
+        const dt=performance.now()-start, totalDx=Math.abs(lx-sx), totalDy=Math.abs(ly-sy);
+        if(!moved && dt<=TAP_MAX_TIME_MS && totalDx<=TAP_MAX_MOVE_PX && totalDy<=TAP_MAX_MOVE_PX){ synthKey('ArrowUp'); }
       }
-
       el.addEventListener('touchstart', onStart, opts);
       el.addEventListener('touchmove',  onMove,  opts);
       el.addEventListener('touchend',   onEnd,   opts);
@@ -401,56 +351,54 @@
       el.addEventListener('pointerup',   onEnd,   opts);
     })();
 
-    // ---- TURBO + COUNTDOWN ----
+    /* ---------- On-screen mobile controls ---------- */
+    (function enableMobileControls(){
+      const bar = document.getElementById('mobileControls');
+      if (!bar) return;
+      // Uzun basışta tekrar tetikleme (left/right/down)
+      const repeatable = new Set(['ArrowLeft','ArrowRight','ArrowDown']);
+      const timers = new Map();
+      function startRepeat(key, el){
+        synthKey(key);
+        if (!repeatable.has(key)) return;
+        const t1 = setTimeout(()=>{
+          const t2 = setInterval(()=> synthKey(key), 70);
+          timers.set(el, t2);
+        }, 220);
+        timers.set(el, t1);
+      }
+      function stopRepeat(el){
+        const t = timers.get(el);
+        if (!t) return;
+        clearTimeout(t); clearInterval(t);
+        timers.delete(el);
+      }
+      bar.querySelectorAll('.ctrl').forEach(btn=>{
+        const key = btn.getAttribute('data-key');
+        btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); startRepeat(key, btn); });
+        btn.addEventListener('pointerup',   ()=> stopRepeat(btn));
+        btn.addEventListener('pointercancel',()=> stopRepeat(btn));
+        btn.addEventListener('pointerleave', ()=> stopRepeat(btn));
+        btn.addEventListener('click', (e)=> e.preventDefault());
+      });
+    })();
+
+    /* ---------- Turbo + Countdown ---------- */
     (function enableTurbo(){
-      const TURBO = {
-        enabled: true,
-        startMs: 220,      // başlangıç düşüş aralığı
-        minMs: 80,         // minimum aralık
-        rampEverySec: 10,  // kaç saniyede bir hızlansın
-        rampStepMs: 20,    // her adımda ne kadar hızlansın
-        sessionSeconds: 60 // round süresi (sn)
-      };
-
-      function synthKey(code){
-        const ev = new KeyboardEvent('keydown', { key: code, code, bubbles: true });
-        window.dispatchEvent(ev);
-        document.dispatchEvent(ev);
-      }
-
+      const TURBO = { enabled:true, startMs:220, minMs:80, rampEverySec:10, rampStepMs:20, sessionSeconds:60 };
       const $timer = document.getElementById('countdown');
-      let dropMs = TURBO.startMs;
-      let dropTimer = null, rampTimer = null, tickTimer = null;
-      let remaining = TURBO.sessionSeconds;
-      let running = false;
+      let dropMs = TURBO.startMs, dropTimer=null, rampTimer=null, tickTimer=null;
+      let remaining = TURBO.sessionSeconds, running=false;
 
-      function fmt(sec){
-        const m = Math.floor(sec/60).toString().padStart(2,'0');
-        const s = Math.floor(sec%60).toString().padStart(2,'0');
-        return `${m}:${s}`;
-      }
-      function renderTimer(){
-        if (!$timer) return;
-        $timer.textContent = `⏱ ${fmt(remaining)}`;
-        $timer.classList.toggle('warn', remaining <= 10);
-      }
-      function vibrate(ms){ try{ navigator.vibrate?.(ms); }catch(_){} }
+      function fmt(sec){ const m=String(Math.floor(sec/60)).padStart(2,'0'); const s=String(sec%60).padStart(2,'0'); return `${m}:${s}`; }
+      function renderTimer(){ if($timer){ $timer.textContent = `⏱ ${fmt(remaining)}`; $timer.classList.toggle('warn', remaining<=10); } }
 
       function startTurbo(){
         if(!TURBO.enabled || running) return;
-        running = true;
+        stopTurbo(); running = true;
+        remaining = TURBO.sessionSeconds; dropMs = TURBO.startMs; renderTimer();
 
-        // reset
-        stopTurbo();
-        running = true;
-        remaining = TURBO.sessionSeconds;
-        dropMs = TURBO.startMs;
-        renderTimer();
-
-        // sürekli ArrowDown sinyali
         dropTimer = setInterval(()=> synthKey('ArrowDown'), dropMs);
-
-        // zamanla hızlan
         rampTimer = setInterval(()=>{
           if (dropMs <= TURBO.minMs) return;
           dropMs = Math.max(TURBO.minMs, dropMs - TURBO.rampStepMs);
@@ -458,49 +406,30 @@
           dropTimer = setInterval(()=> synthKey('ArrowDown'), dropMs);
         }, TURBO.rampEverySec * 1000);
 
-        // saniyelik geri sayım
         tickTimer = setInterval(()=>{
-          remaining--;
-          if (remaining <= 10) vibrate(8);
-          renderTimer();
-          if (remaining <= 0){
-            endRound(true);
-          }
+          remaining--; if (remaining<=10) vibrate(8); renderTimer();
+          if (remaining<=0) endRound(true);
         }, 1000);
       }
-
-      function stopTurbo(){
-        clearInterval(dropTimer);
-        clearInterval(rampTimer);
-        clearInterval(tickTimer);
-        dropTimer = rampTimer = tickTimer = null;
-        running = false;
-      }
-
+      function stopTurbo(){ clearInterval(dropTimer); clearInterval(rampTimer); clearInterval(tickTimer); dropTimer=rampTimer=tickTimer=null; running=false; }
       async function endRound(auto=false){
-        if (!running) return;
-        stopTurbo();
-        try { await window.__miniapp?.flushXP?.(); } catch(_) {}
-        const b = document.getElementById('myRankBanner');
+        if (!running) return; stopTurbo();
+        try{ await window.__miniapp?.flushXP?.(); }catch(_){}
+        const b=document.getElementById('myRankBanner');
         if (b) b.textContent = auto ? 'Round finished — XP saved (Time up)' : 'Round finished — XP saved';
-        if ($timer) { $timer.textContent = '⏱ 00:00'; $timer.classList.add('warn'); }
+        if ($timer){ $timer.textContent='⏱ 00:00'; $timer.classList.add('warn'); }
         vibrate(30);
       }
 
-      // UI bağla
       document.getElementById('startButton')?.addEventListener('click', startTurbo);
       document.getElementById('finishButton')?.addEventListener('click', ()=> endRound(false));
-
-      // ilk render
       renderTimer();
 
-      // konsol
+      // konsol kısayolları
       window.__turbo = {
-        start: startTurbo,
-        stop:  stopTurbo,
-        end:   endRound,
-        setMs: (ms)=>{ dropMs = ms; if (dropTimer){ clearInterval(dropTimer); dropTimer = setInterval(()=>synthKey('ArrowDown'), dropMs); } },
-        setSeconds: (s)=>{ remaining = s; renderTimer(); }
+        start:startTurbo, stop:stopTurbo, end:endRound,
+        setMs:(ms)=>{ dropMs=ms; if(dropTimer){ clearInterval(dropTimer); dropTimer=setInterval(()=>synthKey('ArrowDown'), dropMs); } },
+        setSeconds:(s)=>{ remaining=s; renderTimer(); }
       };
     })();
 

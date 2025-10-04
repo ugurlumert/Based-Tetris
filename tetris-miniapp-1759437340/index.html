@@ -18,14 +18,14 @@
   <meta name="twitter:description" content="Play Tetris, earn XP on Base, and see your personal rank." />
   <meta name="twitter:image" content="https://based-tetris.vercel.app/cover.png" />
 
-  <!-- Farcaster Mini App embed -->
+  <!-- Farcaster Mini App embed (3:2) -->
   <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://based-tetris.vercel.app/cover-1200x800.png","button":{"title":"Open TetriTiny"}}'>
 
   <!-- Icons -->
   <link rel="icon" href="/icon.png" />
   <link rel="apple-touch-icon" href="/icon-1024.png" />
 
-  <!-- Base styles -->
+  <!-- Base styles (opsiyonel) -->
   <link rel="stylesheet" href="style.css" />
 
   <style>
@@ -55,11 +55,10 @@
       height:auto;           /* keep aspect ratio – no stretching */
       border-radius:10px;
       background:#091426;
-      /* ÖNEMLİ: mobilde tarayıcı hareketlerini kapatıp kendi jestlerimizi kullan */
-      touch-action: none;
+      touch-action: none;    /* mobil jestler için */
     }
     .side h1{ margin: 8px 0 12px; font-size: 28px; }
-    .row{ display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 10px; }
+    .row{ display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 10px; align-items:center }
     button{
       appearance:none; border:none; border-radius:10px; padding:10px 14px;
       background:#1b2a45; color:#e6fbff; font-weight:600; cursor:pointer;
@@ -68,9 +67,24 @@
     button:hover{ background:#20355a; }
     .stats p{ margin:4px 0; }
     ul#leaderboard{ margin:8px 0 0; padding:0 0 0 16px; }
+
+    /* Timer pill */
+    .timer{
+      margin-left:auto;
+      padding:8px 12px;
+      border-radius:999px;
+      background:#172746;
+      border:1px solid #2b3e69;
+      font-weight:700;
+      letter-spacing:.3px;
+      min-width:88px;
+      text-align:center;
+      user-select:none;
+    }
+    .timer.warn{ background:#2a1e1e; border-color:#6b2b2b }
   </style>
 
-  <!-- Farcaster Mini Apps SDK (ready() to hide splash) -->
+  <!-- Farcaster Mini Apps SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@farcaster/mini-apps-sdk@latest/dist/browser/mini-apps-sdk.umd.js"></script>
   <script>
     // Call ready() safely across SDK variants
@@ -109,6 +123,9 @@
         <button id="connect">🔗 Connect Wallet</button>
         <button id="startButton">Start</button>
         <button id="finishButton">Finish</button>
+
+        <!-- COUNTDOWN -->
+        <div id="countdown" class="timer" aria-live="polite" title="Time Left">⏱ 01:00</div>
       </div>
 
       <div class="stats">
@@ -130,7 +147,7 @@
   <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-  <!-- Wallet + XP + On-chain record + Personal Rank + Touch controls -->
+  <!-- Wallet + XP + Rank + Touch + Turbo + Countdown -->
   <script>
   (function(){
     const CONTRACT_ADDRESS = "0x1F268942987EE88397e6263b3Eff23a2840F31AD";
@@ -177,7 +194,7 @@
       document.getElementById("addr").textContent =
         currentAddress.slice(0,6) + "..." + currentAddress.slice(-4);
       loadXPFromStorage();
-      fetchAndRenderMyRank().catch(console.error); // bağlanınca rank göster
+      fetchAndRenderMyRank().catch(console.error);
     }
 
     document.getElementById("connect").addEventListener("click", ()=>{ connectWallet().catch(console.error); });
@@ -208,7 +225,7 @@
 
     // -------- On-chain XP --------
     async function flushXP(){
-      if (!currentAddress || sessionXp <= 0) return; // boş XP gönderme
+      if (!currentAddress || sessionXp <= 0) return;
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       await ensureBaseNetwork(provider);
       const signer = provider.getSigner();
@@ -219,7 +236,7 @@
         const tx = await contract.record(ethers.BigNumber.from(sessionXp), sessionId);
         await tx.wait();
         sessionXp = 0;
-        await fetchAndRenderMyRank(); // TX sonrası rank güncelle
+        await fetchAndRenderMyRank();
       }catch(e){
         console.error("record() failed:", e);
         alert("XP kaydedilemedi: " + (e?.data?.message || e?.message || e));
@@ -238,7 +255,7 @@
       }catch(e){
         console.warn("farcaster lookup failed, fallback to address", e);
       }
-      return null; // bulunamazsa kısa adres kullan
+      return null;
     }
 
     // -------- Kişisel Rank --------
@@ -259,7 +276,6 @@
 
         const currentBlock = await provider.getBlockNumber();
 
-        // Event'leri kontrat deploy'undan itibaren tara
         let players = new Set();
         try{
           const events = await contract.queryFilter("XpRecorded", DEPLOY_BLOCK, currentBlock);
@@ -268,7 +284,6 @@
           console.warn("queryFilter failed, continue with self only", e);
         }
 
-        // Kendini her durumda ekle (XP 0 olsa bile rank gözüksün)
         players.add(currentAddress);
 
         const all = [];
@@ -312,26 +327,20 @@
       }
     }
 
-    // Sayfa açılınca rank'ı dene (bağlı cüzdan yoksa bağlanınca güncellenir)
-    window.addEventListener("load", fetchAndRenderMyRank);
-
     // ---- TOUCH / SWIPE KONTROLLERİ ----
     (function enableTouchControls(){
-      const HARD_DROP_ON_SWIPE_UP = false;      // istersen true yap
+      const HARD_DROP_ON_SWIPE_UP = false; // true yaparsan yukarı swipe = hard drop
       const el = document.getElementById('tetris');
 
-      // Eşikler
-      const TAP_MAX_TIME_MS = 250;              // tap sayılması için max süre
-      const TAP_MAX_MOVE_PX = 12;               // tap sayılması için max hareket
-      const STEP_PX = 24;                        // şu kadar pikselde bir adım
+      const TAP_MAX_TIME_MS = 250;
+      const TAP_MAX_MOVE_PX = 12;
+      const STEP_PX = 24;
       const opts = { passive: false };
 
-      // Başlangıç durumları
       let sx=0, sy=0, lx=0, ly=0, start=0, moved=false;
 
       function synthKey(key){
         const evt = new KeyboardEvent('keydown', { key, code: key, bubbles: true });
-        // hem window hem document dinleyicilerine gönder
         window.dispatchEvent(evt);
         document.dispatchEvent(evt);
       }
@@ -346,11 +355,9 @@
 
       function onMove(e){
         const p = e.touches ? e.touches[0] : e;
-
         const dx = p.clientX - lx;
         const dy = p.clientY - ly;
 
-        // sağ/sol adımları (bir kerede birden fazla at)
         const stepsX = Math.trunc(dx / STEP_PX);
         if (stepsX !== 0){
           for (let i=0;i<Math.abs(stepsX);i++){
@@ -360,7 +367,6 @@
           moved = true;
         }
 
-        // aşağı adımları (soft drop)
         const stepsDown = Math.trunc((p.clientY - ly) / STEP_PX);
         if (stepsDown > 0){
           for (let i=0;i<stepsDown;i++) synthKey('ArrowDown');
@@ -368,17 +374,13 @@
           moved = true;
         }
 
-        // yukarı swipe opsiyonel (hard drop)
         if (HARD_DROP_ON_SWIPE_UP){
           const stepsUp = Math.trunc((ly - p.clientY) / (STEP_PX*2));
           if (stepsUp > 0){
-            synthKey('Space'); // çoğu Tetris motorunda hard drop
-            lx = p.clientX;
-            ly = p.clientY;
-            moved = true;
+            synthKey('Space');
+            lx = p.clientX; ly = p.clientY; moved = true;
           }
         }
-
         e.preventDefault();
       }
 
@@ -386,21 +388,120 @@
         const dt = performance.now() - start;
         const totalDx = Math.abs(lx - sx);
         const totalDy = Math.abs(ly - sy);
-
-        // kısa ve küçük hareket → TAP = ROTATE
         if (!moved && dt <= TAP_MAX_TIME_MS && totalDx <= TAP_MAX_MOVE_PX && totalDy <= TAP_MAX_MOVE_PX){
           synthKey('ArrowUp'); // rotate
         }
       }
 
-      // Touch + Pointer (geniş destek)
       el.addEventListener('touchstart', onStart, opts);
       el.addEventListener('touchmove',  onMove,  opts);
       el.addEventListener('touchend',   onEnd,   opts);
-
       el.addEventListener('pointerdown', onStart, opts);
       el.addEventListener('pointermove', onMove,  opts);
       el.addEventListener('pointerup',   onEnd,   opts);
+    })();
+
+    // ---- TURBO + COUNTDOWN ----
+    (function enableTurbo(){
+      const TURBO = {
+        enabled: true,
+        startMs: 220,      // başlangıç düşüş aralığı
+        minMs: 80,         // minimum aralık
+        rampEverySec: 10,  // kaç saniyede bir hızlansın
+        rampStepMs: 20,    // her adımda ne kadar hızlansın
+        sessionSeconds: 60 // round süresi (sn)
+      };
+
+      function synthKey(code){
+        const ev = new KeyboardEvent('keydown', { key: code, code, bubbles: true });
+        window.dispatchEvent(ev);
+        document.dispatchEvent(ev);
+      }
+
+      const $timer = document.getElementById('countdown');
+      let dropMs = TURBO.startMs;
+      let dropTimer = null, rampTimer = null, tickTimer = null;
+      let remaining = TURBO.sessionSeconds;
+      let running = false;
+
+      function fmt(sec){
+        const m = Math.floor(sec/60).toString().padStart(2,'0');
+        const s = Math.floor(sec%60).toString().padStart(2,'0');
+        return `${m}:${s}`;
+      }
+      function renderTimer(){
+        if (!$timer) return;
+        $timer.textContent = `⏱ ${fmt(remaining)}`;
+        $timer.classList.toggle('warn', remaining <= 10);
+      }
+      function vibrate(ms){ try{ navigator.vibrate?.(ms); }catch(_){} }
+
+      function startTurbo(){
+        if(!TURBO.enabled || running) return;
+        running = true;
+
+        // reset
+        stopTurbo();
+        running = true;
+        remaining = TURBO.sessionSeconds;
+        dropMs = TURBO.startMs;
+        renderTimer();
+
+        // sürekli ArrowDown sinyali
+        dropTimer = setInterval(()=> synthKey('ArrowDown'), dropMs);
+
+        // zamanla hızlan
+        rampTimer = setInterval(()=>{
+          if (dropMs <= TURBO.minMs) return;
+          dropMs = Math.max(TURBO.minMs, dropMs - TURBO.rampStepMs);
+          clearInterval(dropTimer);
+          dropTimer = setInterval(()=> synthKey('ArrowDown'), dropMs);
+        }, TURBO.rampEverySec * 1000);
+
+        // saniyelik geri sayım
+        tickTimer = setInterval(()=>{
+          remaining--;
+          if (remaining <= 10) vibrate(8);
+          renderTimer();
+          if (remaining <= 0){
+            endRound(true);
+          }
+        }, 1000);
+      }
+
+      function stopTurbo(){
+        clearInterval(dropTimer);
+        clearInterval(rampTimer);
+        clearInterval(tickTimer);
+        dropTimer = rampTimer = tickTimer = null;
+        running = false;
+      }
+
+      async function endRound(auto=false){
+        if (!running) return;
+        stopTurbo();
+        try { await window.__miniapp?.flushXP?.(); } catch(_) {}
+        const b = document.getElementById('myRankBanner');
+        if (b) b.textContent = auto ? 'Round finished — XP saved (Time up)' : 'Round finished — XP saved';
+        if ($timer) { $timer.textContent = '⏱ 00:00'; $timer.classList.add('warn'); }
+        vibrate(30);
+      }
+
+      // UI bağla
+      document.getElementById('startButton')?.addEventListener('click', startTurbo);
+      document.getElementById('finishButton')?.addEventListener('click', ()=> endRound(false));
+
+      // ilk render
+      renderTimer();
+
+      // konsol
+      window.__turbo = {
+        start: startTurbo,
+        stop:  stopTurbo,
+        end:   endRound,
+        setMs: (ms)=>{ dropMs = ms; if (dropTimer){ clearInterval(dropTimer); dropTimer = setInterval(()=>synthKey('ArrowDown'), dropMs); } },
+        setSeconds: (s)=>{ remaining = s; renderTimer(); }
+      };
     })();
 
     // tetris.js erişsin

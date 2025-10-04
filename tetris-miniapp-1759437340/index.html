@@ -18,7 +18,7 @@
   <meta name="twitter:description" content="Play Tetris, earn XP on Base, and see your personal rank." />
   <meta name="twitter:image" content="https://based-tetris.vercel.app/cover.png" />
 
-  <!-- Farcaster Mini App embed (validator-friendly minimal JSON; 3:2 görsel şart) -->
+  <!-- Farcaster Mini App embed -->
   <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://based-tetris.vercel.app/cover-1200x800.png","button":{"title":"Open TetriTiny"}}'>
 
   <!-- Icons -->
@@ -28,7 +28,6 @@
   <!-- Base styles -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Small layout tweaks for Mini App viewport -->
   <style>
     :root { --card-w: clamp(320px, 86vw, 480px); }
     html, body { background: #0f1b2d; color:#e6fbff; margin:0; padding:0; }
@@ -56,6 +55,8 @@
       height:auto;           /* keep aspect ratio – no stretching */
       border-radius:10px;
       background:#091426;
+      /* ÖNEMLİ: mobilde tarayıcı hareketlerini kapatıp kendi jestlerimizi kullan */
+      touch-action: none;
     }
     .side h1{ margin: 8px 0 12px; font-size: 28px; }
     .row{ display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 10px; }
@@ -83,6 +84,13 @@
       for (const a of cands) { try { if (a && typeof a.ready === 'function') { a.ready(); break; } } catch(_){} }
     }
     document.addEventListener('DOMContentLoaded', () => setTimeout(fcReady, 0));
+
+    // Klavye ile oynarken sayfa kaymasını engelle
+    window.addEventListener('keydown', (e)=>{
+      if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
+        e.preventDefault();
+      }
+    }, { passive:false });
   </script>
 </head>
 <body>
@@ -91,7 +99,7 @@
 
   <div class="container">
     <div class="game-card">
-      <canvas id="tetris" width="240" height="400"></canvas>
+      <canvas id="tetris" width="240" height="400" aria-label="TetriTiny game canvas"></canvas>
     </div>
 
     <div class="side game-card">
@@ -122,7 +130,7 @@
   <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-  <!-- Wallet + XP + On-chain record + Personal Rank -->
+  <!-- Wallet + XP + On-chain record + Personal Rank + Touch controls -->
   <script>
   (function(){
     const CONTRACT_ADDRESS = "0x1F268942987EE88397e6263b3Eff23a2840F31AD";
@@ -144,13 +152,6 @@
     let currentAddress = null; // lowercased
     let xp = 0;
     let sessionXp = 0;
-
-    // -------- Utility: prevent page scrolling on game keys
-    window.addEventListener('keydown', (e)=>{
-      if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
-        e.preventDefault();
-      }
-    }, { passive:false });
 
     // -------- Wallet --------
     async function ensureBaseNetwork(provider){
@@ -313,6 +314,94 @@
 
     // Sayfa açılınca rank'ı dene (bağlı cüzdan yoksa bağlanınca güncellenir)
     window.addEventListener("load", fetchAndRenderMyRank);
+
+    // ---- TOUCH / SWIPE KONTROLLERİ ----
+    (function enableTouchControls(){
+      const HARD_DROP_ON_SWIPE_UP = false;      // istersen true yap
+      const el = document.getElementById('tetris');
+
+      // Eşikler
+      const TAP_MAX_TIME_MS = 250;              // tap sayılması için max süre
+      const TAP_MAX_MOVE_PX = 12;               // tap sayılması için max hareket
+      const STEP_PX = 24;                        // şu kadar pikselde bir adım
+      const opts = { passive: false };
+
+      // Başlangıç durumları
+      let sx=0, sy=0, lx=0, ly=0, start=0, moved=false;
+
+      function synthKey(key){
+        const evt = new KeyboardEvent('keydown', { key, code: key, bubbles: true });
+        // hem window hem document dinleyicilerine gönder
+        window.dispatchEvent(evt);
+        document.dispatchEvent(evt);
+      }
+
+      function onStart(e){
+        const p = e.touches ? e.touches[0] : e;
+        sx = lx = p.clientX;
+        sy = ly = p.clientY;
+        start = performance.now();
+        moved = false;
+      }
+
+      function onMove(e){
+        const p = e.touches ? e.touches[0] : e;
+
+        const dx = p.clientX - lx;
+        const dy = p.clientY - ly;
+
+        // sağ/sol adımları (bir kerede birden fazla at)
+        const stepsX = Math.trunc(dx / STEP_PX);
+        if (stepsX !== 0){
+          for (let i=0;i<Math.abs(stepsX);i++){
+            synthKey(stepsX > 0 ? 'ArrowRight' : 'ArrowLeft');
+          }
+          lx += stepsX * STEP_PX;
+          moved = true;
+        }
+
+        // aşağı adımları (soft drop)
+        const stepsDown = Math.trunc((p.clientY - ly) / STEP_PX);
+        if (stepsDown > 0){
+          for (let i=0;i<stepsDown;i++) synthKey('ArrowDown');
+          ly += stepsDown * STEP_PX;
+          moved = true;
+        }
+
+        // yukarı swipe opsiyonel (hard drop)
+        if (HARD_DROP_ON_SWIPE_UP){
+          const stepsUp = Math.trunc((ly - p.clientY) / (STEP_PX*2));
+          if (stepsUp > 0){
+            synthKey('Space'); // çoğu Tetris motorunda hard drop
+            lx = p.clientX;
+            ly = p.clientY;
+            moved = true;
+          }
+        }
+
+        e.preventDefault();
+      }
+
+      function onEnd(){
+        const dt = performance.now() - start;
+        const totalDx = Math.abs(lx - sx);
+        const totalDy = Math.abs(ly - sy);
+
+        // kısa ve küçük hareket → TAP = ROTATE
+        if (!moved && dt <= TAP_MAX_TIME_MS && totalDx <= TAP_MAX_MOVE_PX && totalDy <= TAP_MAX_MOVE_PX){
+          synthKey('ArrowUp'); // rotate
+        }
+      }
+
+      // Touch + Pointer (geniş destek)
+      el.addEventListener('touchstart', onStart, opts);
+      el.addEventListener('touchmove',  onMove,  opts);
+      el.addEventListener('touchend',   onEnd,   opts);
+
+      el.addEventListener('pointerdown', onStart, opts);
+      el.addEventListener('pointermove', onMove,  opts);
+      el.addEventListener('pointerup',   onEnd,   opts);
+    })();
 
     // tetris.js erişsin
     window.__miniapp = { connectWallet, addXP, flushXP, fetchAndRenderMyRank };

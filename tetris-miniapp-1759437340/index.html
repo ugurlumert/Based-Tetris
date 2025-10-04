@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <title>TetriTiny</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f1b2d" />
+  <meta name="color-scheme" content="dark light" />
 
   <!-- Open Graph / Twitter -->
   <meta property="og:title" content="TetriTiny — Onchain Tetris" />
@@ -16,25 +18,12 @@
   <meta name="twitter:description" content="Play Tetris, earn XP on Base, and see your personal rank." />
   <meta name="twitter:image" content="https://based-tetris.vercel.app/cover.png" />
 
-  <!-- Farcaster Mini App embed (launch button + splash) -->
-  <meta name="fc:miniapp" content='{
-    "version": "1",
-    "imageUrl": "https://based-tetris.vercel.app/cover.png",
-    "button": {
-      "title": "Open TetriTiny",
-      "action": {
-        "type": "launch_frame",
-        "name": "TetriTiny",
-        "url": "https://based-tetris.vercel.app/",
-        "splashImageUrl": "https://based-tetris.vercel.app/splash.png",
-        "splashBackgroundColor": "#1E1E2F"
-      }
-    }
-  }' />
+  <!-- Farcaster Mini App embed (validator-friendly minimal JSON; 3:2 görsel şart) -->
+  <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://based-tetris.vercel.app/cover-1200x800.png","button":{"title":"Open TetriTiny"}}'>
 
   <!-- Icons -->
   <link rel="icon" href="/icon.png" />
-  <link rel="apple-touch-icon" href="/icon.png" />
+  <link rel="apple-touch-icon" href="/icon-1024.png" />
 
   <!-- Base styles -->
   <link rel="stylesheet" href="style.css" />

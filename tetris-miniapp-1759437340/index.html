@@ -15,7 +15,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="/cover.png" />
 
-  <!-- Farcaster Mini App (button image only; launch handled by Warpcast) -->
+  <!-- Farcaster Mini App -->
   <meta name="fc:miniapp" content='{"version":"1","imageUrl":"/cover.png","button":{"title":"Open TetriTiny"}}' />
 
   <link rel="icon" href="/icon.png" />
@@ -23,7 +23,6 @@
 
   <style>
     :root{ --card-w:clamp(320px,86vw,560px) }
-
     html,body{ background:#0f1b2d; color:#e6fbff; margin:0 }
     .banner{ padding:10px 12px; text-align:center; background:#12223d; border-bottom:1px solid #2b3e69; font-weight:700 }
     .version{ font-size:12px; opacity:.65; margin-left:8px }
@@ -31,10 +30,8 @@
     .container{ max-width:var(--card-w); margin:14px auto 88px; display:grid; gap:14px; padding:0 10px }
     .card{ position:relative; background:#0d1626; border:1px solid #233452; border-radius:14px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,.25) }
 
-    /* Canvas */
     #tetris{ display:block; width:100%; height:auto; border-radius:10px; background:#091426; touch-action:none; outline:none }
 
-    /* Lock overlay (wallet not connected) */
     .lock{ position:absolute; inset:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
            border-radius:10px; background:rgba(10,16,28,.82); backdrop-filter:blur(3px); text-align:center; padding:16px; z-index:3 }
 
@@ -43,7 +40,6 @@
             box-shadow:inset 0 0 0 1px #2b3e69; cursor:pointer; touch-action:manipulation }
     button:hover{ background:#20355a } button[disabled]{ opacity:.6; cursor:not-allowed }
 
-    /* Mobile on-screen controls (only coarse pointers) */
     .mobile-controls{ position:fixed; left:0; right:0; bottom:0; padding:max(8px,env(safe-area-inset-bottom)) 12px 12px;
       background:linear-gradient(180deg,rgba(10,16,28,0),rgba(10,16,28,.85) 30%,rgba(10,16,28,.95));
       border-top:1px solid #233452; backdrop-filter:blur(6px); display:none; z-index:4 }
@@ -57,17 +53,14 @@
     .me{ font-weight:700; color:#00ffcc }
   </style>
 
-  <!-- Farcaster SDK (UMD) as fallback; we also try ESM below -->
   <script src="https://cdn.jsdelivr.net/npm/@farcaster/mini-apps-sdk@latest/dist/browser/mini-apps-sdk.umd.js"></script>
 </head>
 <body>
-  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: 2025-10-05-onefile</span></div>
+  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: 2025-10-05-fast</span></div>
 
   <div class="container">
     <div class="card">
       <canvas id="tetris" width="240" height="400" tabindex="0" aria-label="TetriTiny"></canvas>
-
-      <!-- Wallet kilidi -->
       <div id="lock" class="lock" aria-live="polite">
         <h3>Connect wallet to play</h3>
         <p>Your XP will be recorded on Base.</p>
@@ -98,7 +91,6 @@
     </div>
   </div>
 
-  <!-- Mobil on-screen tuşlar -->
   <div class="mobile-controls" id="mobileControls">
     <div class="grid">
       <div class="ctrl" data-key="ArrowLeft">◀</div>
@@ -109,36 +101,26 @@
     </div>
   </div>
 
-  <!-- Oyun -->
   <script src="tetris.js"></script>
-
-  <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-  <!-- Wallet + XP + Rank + Farcaster ready + Touch controls + Responsive sizing -->
   <script>
   (async function(){
-    /* ----- Farcaster ready() (splash takılmasın) ----- */
+    /* ---------- Farcaster ready() ---------- */
     async function fcReady(){
       try{
-        // UMD
         const a = window?.FarcasterMiniAppsSDK?.actions || window?.farcaster?.actions || window?.warpcast?.actions || window?.sdk?.actions;
-        if (a && typeof a.ready==='function'){ await a.ready(); return; }
-        // ESM fallback
+        if (a?.ready) { await a.ready(); return; }
         const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
         await sdk.actions.ready();
-      }catch(_){
-        try{ window.parent?.postMessage?.({type:'miniapp:ready'},'*'); }catch(__){}
-      }
+      }catch(_){ try{ window.parent?.postMessage?.({type:'miniapp:ready'},'*'); }catch(__){} }
     }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', fcReady, { once:true });
-    } else { fcReady(); }
-    window.addEventListener('load', fcReady, { once:true });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fcReady, {once:true}); else fcReady();
+    window.addEventListener('load', fcReady, {once:true});
 
-    /* ----- Zincir / sözleşme ----- */
+    /* ---------- Chain / Contract ---------- */
     const CONTRACT_ADDRESS = "0x1F268942987EE88397e6263b3Eff23a2840F31AD";
-    const DEPLOY_BLOCK     = 36327995; // Basescan deploy block
+    const DEPLOY_BLOCK     = 36327995;
     const BASE_PARAMS = {
       chainId:'0x2105', chainName:'Base Mainnet',
       nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},
@@ -151,7 +133,7 @@
       "function totalXp(address) view returns (uint256)"
     ];
 
-    /* ----- DOM ----- */
+    /* ---------- DOM ---------- */
     const $canvas = document.getElementById('tetris');
     const $banner = document.getElementById('topBanner');
     const $addr   = document.getElementById('addr');
@@ -159,17 +141,16 @@
     const $start  = document.getElementById('startButton');
     const $finish = document.getElementById('finishButton');
 
-    /* ----- State ----- */
+    /* ---------- State ---------- */
     let currentAddress = null; // lowercased
     let xp = 0, sessionXp = 0;
     let connected = false;
 
-    /* Prevent page scroll with game keys */
     window.addEventListener('keydown', (e)=>{
       if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
     }, { passive:false });
 
-    /* ----- Wallet helpers ----- */
+    /* ---------- Wallet helpers ---------- */
     async function ensureBaseNetwork(provider){
       const chainId = await provider.send('eth_chainId', []);
       if (chainId !== BASE_PARAMS.chainId) {
@@ -190,8 +171,27 @@
       $addr.textContent = currentAddress.slice(0,6)+"..."+currentAddress.slice(-4);
       afterConnected();
     }
-    function openMetaMask(){ const url = encodeURIComponent(location.href); location.href = `https://link.metamask.io/dapp/${decodeURIComponent(url)}` }
-    function openCoinbase(){ const url = encodeURIComponent(location.href); location.href = `https://go.cb-w.com/dapp?cb_url=${url}` }
+
+    // ---- Deep Link Helpers (robust) ----
+    function cleanDappHost(){ return location.href.replace(/^https?:\/\//,''); }
+    function openMetaMask(){
+      const host  = cleanDappHost();
+      const uni   = `https://metamask.app.link/dapp/${host}`;
+      const sch   = `metamask://dapp/${host}`;
+      let opened = false;
+      try{ const w = window.open(uni, '_blank'); if (w) opened = true; }catch(_){}
+      if (!opened) location.href = uni;
+      setTimeout(()=>{ try{ location.href = sch; }catch(_){}} , 1200);
+      setTimeout(async ()=>{
+        try{ await navigator.clipboard.writeText(uni); alert('If MetaMask didn’t open, paste this in your browser:\n'+uni); }catch(_){}
+      }, 2400);
+    }
+    function openCoinbase(){
+      const url = encodeURIComponent(location.href);
+      const uni = `https://go.cb-w.com/dapp?cb_url=${url}`;
+      let opened=false; try{ const w=window.open(uni,'_blank'); if(w) opened=true; }catch(_){}
+      if(!opened) location.href=uni;
+    }
 
     document.getElementById('connectBtn').addEventListener('click', async ()=>{
       try{
@@ -208,7 +208,7 @@
       window.ethereum.on?.('chainChanged',   async ()=>{ if(connected){ await connectInjected().catch(console.error) } });
     }
 
-    /* ----- XP (local) ----- */
+    /* ---------- XP (local) ---------- */
     function loadXPFromStorage(){
       if (!currentAddress) return;
       const saved = localStorage.getItem("xp_" + currentAddress);
@@ -222,13 +222,13 @@
       const el = document.getElementById("xp"); if (el) el.textContent = xp;
     }
 
-    /* ----- On-chain XP (throttle + retry, single source of truth) ----- */
+    /* ---------- On-chain XP (throttle + retry) ---------- */
     let _flushing=false, _lastFlush=0, _queued=false;
     async function flushXP(){
       if (!currentAddress || sessionXp <= 0) return;
 
       const now = Date.now();
-      if (now - _lastFlush < 15000) { // 15s throttle
+      if (now - _lastFlush < 15000) {
         if (!_queued) { _queued = true; setTimeout(()=>{ _queued=false; flushXP(); }, 16000 - (now - _lastFlush)); }
         return;
       }
@@ -260,7 +260,7 @@
       }
     }
 
-    /* ----- Rank (read-only) ----- */
+    /* ---------- Rank ---------- */
     async function getFarcasterHandle(addr){
       try{
         const resp = await fetch(`https://api.neynar.com/v2/farcaster/user-by-verification?address=${addr}`, {
@@ -315,7 +315,7 @@
     }
     window.addEventListener('load', fetchAndRenderMyRank);
 
-    /* ----- Touch gestures → klavye ----- */
+    /* ---------- Touch gestures ---------- */
     (function(){
       const el=$canvas, TAP_MS=250, TAP_PX=12, STEP=24, opts={passive:false};
       let sx=0,sy=0,lx=0,ly=0,t0=0,moved=false;
@@ -334,7 +334,7 @@
       el.addEventListener('touchstart',start,opts); el.addEventListener('touchmove',move,opts); el.addEventListener('touchend',end,opts);
       el.addEventListener('pointerdown',start,opts); el.addEventListener('pointermove',move,opts); el.addEventListener('pointerup',end,opts);
     })();
-    (function(){ // ekran üzeri butonlar
+    (function(){
       const bar=document.getElementById('mobileControls');
       const isTouch = ()=> (navigator.maxTouchPoints>0) || window.matchMedia('(pointer:coarse)').matches;
       if(!isTouch()) return; bar.style.display='block';
@@ -352,12 +352,12 @@
       });
     })();
 
-    /* ----- Responsive: kart genişliğini ekrana göre ayarla ----- */
+    /* ---------- Responsive width ---------- */
     (function fitCard(){
       function fit(){
-        const reserved = 280;                 // üst içerik + stats + alt tuşlar için tahmini boşluk
+        const reserved = 280;
         const vh = window.innerHeight, vw = window.innerWidth;
-        const maxByHeight = Math.max(320, Math.floor((vh - reserved) * 0.60));   // 240x400 oranına göre
+        const maxByHeight = Math.max(320, Math.floor((vh - reserved) * 0.60));
         const maxByWidth  = Math.floor(vw * 0.90);
         const w = Math.max(320, Math.min(560, maxByHeight, maxByWidth));
         document.documentElement.style.setProperty('--card-w', w + 'px');
@@ -367,7 +367,7 @@
       fit();
     })();
 
-    /* ----- Connect sonrası ----- */
+    /* ---------- Connected ---------- */
     function afterConnected(){
       connected = true;
       loadXPFromStorage();
@@ -379,15 +379,14 @@
       try{ $canvas.focus(); }catch(_){}
     }
 
-    /* ----- Start/Finish işaretlerinin tetris’e ulaşması ----- */
-    // tetris.js Finish->onGameOver çağırır; burada flushXP tek yerden yapılır.
+    /* ---------- Bridge to tetris.js ---------- */
     window.__miniapp = {
-      addXP,
-      flushXP,
+      addXP: (n)=>{ sessionXp += n; xp += n; localStorage.setItem("xp_" + currentAddress, String(xp)); const el=document.getElementById("xp"); if(el) el.textContent=xp; },
+      flushXP: ()=>{}, // tetris çağırmıyor; tek yer: onGameOver
       onGameOver: ()=>{ flushXP(); }
     };
 
-    /* ----- Auto-unlock (hesap zaten bağlıysa) ----- */
+    /* ---------- Auto unlock if already authorized ---------- */
     (async function autoUnlock(){
       try{
         if(!window.ethereum) return;

@@ -1,0 +1,124 @@
+/* Reset & base */
+html, body {
+  height: 100%;
+  margin: 0;
+  background: #0f172a;
+  color: #e5f0ff;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  overflow: hidden; /* panelde scroll çıkmasın */
+}
+
+/* Banner */
+.banner{
+  width:100%;
+  text-align:center;
+  padding:10px 12px;
+  background:#12223d;
+  color:#e6fbff;
+  border-bottom:1px solid #2b3e69;
+  font-weight:700;
+  letter-spacing:.2px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.me{font-weight:700;color:#00ffcc}
+
+/* Container */
+.container{
+  max-width: 960px;
+  margin: 8px auto;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  scrollbar-gutter: stable both-edges;
+}
+
+/* Masaüstünde iki sütun */
+@media (min-width: 820px){
+  .container{
+    grid-template-columns: minmax(0, 360px) 260px;
+    gap: 16px;
+  }
+}
+
+/* === Canvas – orantılı görünüm === */
+#tetris{
+  display:block;
+  width: 100%;
+  max-width: 240px;         /* dar panel için daha küçük */
+  aspect-ratio: 240 / 400;  /* orijinal en-boy oranı */
+  height: auto;
+  margin: 0 auto;
+  background: #0b1224;
+  border: 1px solid #22345e;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.3);
+}
+
+/* Masaüstünde biraz daha büyük */
+@media (min-width: 820px){
+  #tetris{ max-width: 360px; }
+}
+
+/* Sağ panel */
+.side{
+  background: #0b1224;
+  border: 1px solid #22345e;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+}
+
+.side h1{
+  margin: 0 0 8px;
+  font-size: 18px;
+  letter-spacing: .3px;
+}
+
+.row{
+  display:flex;
+  gap:6px;
+  flex-wrap: wrap;
+  margin: 6px 0 6px;
+}
+
+button{
+  appearance: none;
+  border: 1px solid #2a3f6e;
+  background: #152449;
+  color: #e6f0ff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+button:hover{
+  background:#1a2d59;
+  border-color:#3a58a0;
+}
+
+/* Küçük ekranda panel alta */
+@media (max-width: 819px){
+  .side{ order: 2; }
+  #tetris{ order: 1; }
+}
+
+/* Leaderboard */
+#leaderboard{
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+}
+#leaderboard li{
+  padding: 4px 6px;
+  border-bottom: 1px solid #1e2f57;
+  font-size: 14px;
+}

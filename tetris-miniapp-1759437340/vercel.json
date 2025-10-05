@@ -1,0 +1,29 @@
+{
+  "headers": [
+    {
+      "source": "/.well-known/farcaster.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, proxy-revalidate" }
+      ]
+    },
+    {
+      "source": "/(icon|cover|splash).png",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=60, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/screenshot-*.png",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=60, must-revalidate" }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/.well-known/farcaster.json",
+      "destination": "https://api.farcaster.xyz/miniapps/hosted-manifest/0199ac9f-a6af-204d-fe77-4fe2ccce1931",
+      "permanent": false
+    }
+  ]
+}

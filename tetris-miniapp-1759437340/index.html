@@ -7,7 +7,6 @@
   <meta name="theme-color" content="#0f1b2d" />
   <meta name="color-scheme" content="dark" />
 
-  <!-- Social -->
   <meta property="og:title" content="TetriTiny — Onchain Tetris" />
   <meta property="og:description" content="Play Tetris, earn XP on Base, and see your personal rank." />
   <meta property="og:image" content="/cover.png" />
@@ -15,7 +14,6 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="/cover.png" />
 
-  <!-- Farcaster Mini App -->
   <meta name="fc:miniapp" content='{"version":"1","imageUrl":"/cover.png","button":{"title":"Open TetriTiny"}}' />
 
   <link rel="icon" href="/icon.png" />
@@ -53,11 +51,10 @@
     .me{ font-weight:700; color:#00ffcc }
   </style>
 
-  <!-- Farcaster SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@farcaster/mini-apps-sdk@latest/dist/browser/mini-apps-sdk.umd.js"></script>
 </head>
 <body>
-  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: 2025-10-05-touchfix</span></div>
+  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: 2025-10-05-mobile-flush</span></div>
 
   <div class="container">
     <div class="card">
@@ -102,9 +99,7 @@
     </div>
   </div>
 
-  <!-- Game -->
   <script src="tetris.js"></script>
-  <!-- Ethers -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
   <script>
@@ -149,6 +144,8 @@
     let xp = 0, sessionXp = 0;
     let connected = false;
 
+    const PENDING_KEY = (addr)=> `xp_pending_${addr}`;
+
     window.addEventListener('keydown', (e)=>{
       if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
     }, { passive:false });
@@ -184,7 +181,6 @@
       let opened=false; try{ const w=window.open(uni,'_blank'); if(w) opened=true; }catch(_){}
       if(!opened) location.href=uni;
       setTimeout(()=>{ try{ location.href=sch; }catch(_){} },1200);
-      setTimeout(async ()=>{ try{ await navigator.clipboard.writeText(uni); alert('If MetaMask didn’t open, paste this:\n'+uni); }catch(_){} },2400);
     }
     function openCoinbase(){
       const url=encodeURIComponent(location.href);
@@ -260,6 +256,30 @@
       }
     }
 
+    /* ---- NEW: Game-over’da cüzdan yoksa beklemeye al + cüzdanı aç ---- */
+    function queueFlushAndOpenWallet(){
+      if (!currentAddress || sessionXp <= 0) return;
+      try {
+        const key = PENDING_KEY(currentAddress);
+        const prev = parseInt(localStorage.getItem(key)||'0',10) || 0;
+        localStorage.setItem(key, String(prev + sessionXp));
+        sessionXp = 0; // yeni oturumu sıfırla (çift kayıt olmasın)
+      } catch(_) {}
+      // MetaMask tercih; iptal edilirse Coinbase
+      if (confirm('Open wallet to record your XP?\nOK = MetaMask, Cancel = Coinbase')) openMetaMask(); else openCoinbase();
+    }
+
+    async function restorePendingAndFlush(){
+      if (!currentAddress) return;
+      const key = PENDING_KEY(currentAddress);
+      const pending = parseInt(localStorage.getItem(key)||'0',10) || 0;
+      if (pending > 0) {
+        try { localStorage.removeItem(key); } catch(_) {}
+        sessionXp += pending;
+        await flushXP();
+      }
+    }
+
     /* ---------- Rank ---------- */
     async function getFarcasterHandle(addr){
       try{
@@ -317,16 +337,15 @@
 
     /* ---------- Touch gestures (tek dispatch) ---------- */
     (function(){
-      const el=$canvas, TAP_MS=250, TAP_PX=12, STEP=28; // STEP biraz büyütüldü (çift adım önleme)
+      const el=$canvas, TAP_MS=250, TAP_PX=12, STEP=28;
       let sx=0,sy=0,lx=0,ly=0,t0=0,moved=false;
 
       function synth(key){
         const keyCodeMap = {ArrowLeft:37, ArrowUp:38, ArrowRight:39, ArrowDown:40, Space:32};
         const ev = new KeyboardEvent('keydown', { key, code:key, bubbles:true, cancelable:true });
         try { Object.defineProperty(ev, 'keyCode', { get: () => keyCodeMap[key] || 0 }); } catch(_) {}
-        document.dispatchEvent(ev);          // << SADECE BİR YERE
+        document.dispatchEvent(ev);
       }
-
       function start(e){const p=(e.touches?e.touches[0]:e); sx=lx=p.clientX; sy=ly=p.clientY; t0=performance.now(); moved=false}
       function move(e){
         const p=(e.touches?e.touches[0]:e), dx=p.clientX-lx, dy=p.clientY-ly;
@@ -336,7 +355,6 @@
       }
       function end(){const dt=performance.now()-t0, dx=Math.abs(lx-sx), dy=Math.abs(ly-sy); if(!moved&&dt<=TAP_MS&&dx<=TAP_PX&&dy<=TAP_PX) synth('ArrowUp')}
 
-      // Pointer varsa onu kullan; yoksa Touch kullan → ÇİFT TETİKLEME YOK
       if (window.PointerEvent){
         const opts={passive:false};
         el.addEventListener('pointerdown',start,opts);
@@ -350,7 +368,7 @@
       }
     })();
 
-    /* ---------- Ekran üstü mobil butonlar (tek dispatch + stopPropagation) ---------- */
+    /* ---------- Ekran üstü mobil butonlar ---------- */
     (function(){
       const bar=document.getElementById('mobileControls');
       const isTouch = ()=> (navigator.maxTouchPoints>0) || window.matchMedia('(pointer:coarse)').matches;
@@ -360,7 +378,7 @@
         const keyCodeMap = {ArrowLeft:37, ArrowUp:38, ArrowRight:39, ArrowDown:40, Space:32};
         const ev = new KeyboardEvent('keydown', { key, code:key, bubbles:true, cancelable:true });
         try { Object.defineProperty(ev, 'keyCode', { get: () => keyCodeMap[key] || 0 }); } catch(_) {}
-        document.dispatchEvent(ev);          // << SADECE document
+        document.dispatchEvent(ev);
       }
       const repeatable=new Set(['ArrowLeft','ArrowRight','ArrowDown']);
       const timers=new Map();
@@ -402,14 +420,19 @@
       $start.disabled=false;
       $finish.disabled=false;
       try{ $canvas.focus(); }catch(_){}
+      // MetaMask içinde açıldıysa bekleyen XP'yi gönder
+      restorePendingAndFlush().catch(console.error);
     }
 
     /* ---------- Bridge to tetris.js ---------- */
     window.__miniapp = {
       addXP: (n)=>{ sessionXp += n; xp += n; if(currentAddress) localStorage.setItem("xp_" + currentAddress, String(xp));
                     const el=document.getElementById("xp"); if(el) el.textContent=xp; },
-      flushXP: ()=>{}, // tetris çağırmıyor; tek yer: onGameOver
-      onGameOver: ()=>{ flushXP(); }
+      // game over/finish tetikleyicisi
+      onGameOver: ()=>{
+        if (window.ethereum) { flushXP(); }   // MetaMask/CBW içindeysek direkt gönder
+        else { queueFlushAndOpenWallet(); }   // değilsek: beklemeye al + cüzdan aç
+      }
     };
 
     /* ---------- Auto unlock ---------- */
@@ -421,6 +444,9 @@
         if(acc && acc.length) await connectInjected();
       }catch(_){}
     })();
+
+    // Start/Finish butonlarını tetris.js ekliyor; burada sadece aktif/pasif yönetimi:
+    document.getElementById('finishButton').addEventListener('click', ()=>{/* tetris endGame çağırır, onGameOver tetiklenir */});
 
   })();
   </script>

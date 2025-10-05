@@ -5,86 +5,93 @@
   <title>TetriTiny</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Open Graph / Twitter Card -->
-  <meta property="og:title" content="TetriTiny - Onchain Tetris" />
-  <meta property="og:description" content="Play Tetris, earn XP, and see your personal rank. XP is recorded on Base." />
-  <meta property="og:image" content="https://based-tetris.vercel.app/cover.png" />
+  <!-- Social / OG -->
+  <meta property="og:title" content="TetriTiny – Onchain Tetris" />
+  <meta property="og:description" content="Play Tetris, earn XP on Base, and see your rank." />
+  <meta property="og:image" content="/cover-v2.png" />
   <meta property="og:url" content="https://based-tetris.vercel.app/" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="TetriTiny - Onchain Tetris" />
-  <meta name="twitter:description" content="Play Tetris, earn XP, and see your personal rank. XP is recorded on Base." />
-  <meta name="twitter:image" content="https://based-tetris.vercel.app/cover.png" />
+  <meta name="twitter:title" content="TetriTiny – Onchain Tetris" />
+  <meta name="twitter:description" content="Play Tetris, earn XP on Base, and see your rank." />
+  <meta name="twitter:image" content="/cover-v2.png" />
 
-  <!-- Icons -->
+  <!-- Farcaster Mini App -->
+  <meta name="fc:miniapp" content='{
+    "version": "2",
+    "imageUrl": "/cover-1200x800-v2.png",
+    "button": {
+      "title": "Open TetriTiny",
+      "action": {
+        "type": "launch_frame",
+        "name": "TetriTiny",
+        "url": "https://based-tetris.vercel.app/",
+        "splashImageUrl": "/splash.png",
+        "splashBackgroundColor": "#1E1E2F"
+      }
+    }
+  }' />
+
   <link rel="icon" href="/icon-1024.png" />
   <link rel="apple-touch-icon" href="/icon-1024.png" />
 
-  <!-- Styles -->
+  <!-- (Varsa) harici CSS'in kalsın; ama tüm kritik stiller aşağıda inline -->
   <link rel="stylesheet" href="style.css" />
+
   <style>
-    /* banner */
-    .banner{
-      width:100%;text-align:center;padding:10px 12px;background:#12223d;color:#e6fbff;
-      border-bottom:1px solid #2b3e69;font-weight:700;letter-spacing:.2px
-    }
-    .version{font-size:12px;opacity:.7;margin-left:6px}
-    .me{font-weight:700;color:#00ffcc}
-
-    /* game wrapper + overlay lock */
-    .game-wrap{position:relative}
-    .lock{
-      position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-      gap:12px;padding:16px;text-align:center;border-radius:8px;background:rgba(9,16,38,.85);backdrop-filter:blur(4px);z-index:5;color:#e6fbff
-    }
-
-    /* canvas */
-    #tetris{display:block;width:100%;height:auto;border-radius:8px;background:#091426;touch-action:none}
-
-    /* timer pill */
-    .timer{margin-left:auto;padding:6px 10px;border-radius:999px;background:#172746;border:1px solid #2b3e69;font-weight:700;min-width:86px;text-align:center}
-    .timer.warn{background:#2a1e1e;border-color:#6b2b2b}
-
-    /* mobile controls bar */
-    .mobile-controls{
-      position:fixed;left:0;right:0;bottom:0;z-index:50;
-      padding:max(8px,env(safe-area-inset-bottom)) 12px 12px;
-      background:linear-gradient(180deg,rgba(10,16,28,0),rgba(10,16,28,.85) 30%,rgba(10,16,28,.95));
-      border-top:1px solid #233452;backdrop-filter:blur(6px);display:none
-    }
-    .mobile-controls .grid{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-    .ctrl{border:1px solid #2b3e69;border-radius:12px;padding:12px;text-align:center;background:#0d1626;font-size:18px;font-weight:800;user-select:none;touch-action:manipulation}
-    .ctrl:active{transform:translateY(1px)}.ctrl.small{font-size:16px}
-    @media (pointer:coarse){ .mobile-controls{display:block} }
-
-    /* tiny helpers */
+    :root{--card-w:clamp(320px,86vw,560px)}
+    html,body{background:#0f1b2d;color:#e6fbff;margin:0}
+    .banner{padding:10px 12px;text-align:center;background:#12223d;border-bottom:1px solid #2b3e69;font-weight:700}
+    .version{font-size:12px;opacity:.75;margin-left:8px}
+    .container{max-width:var(--card-w);margin:14px auto 88px;display:grid;gap:14px;padding:0 10px}
+    .game-card{position:relative;background:#0d1626;border:1px solid #233452;border-radius:14px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+    #tetris{display:block;width:100%;height:auto;border-radius:10px;background:#091426;touch-action:none}
+    .lock{position:absolute;inset:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:10px;background:rgba(10,16,28,.82);backdrop-filter:blur(3px);text-align:center;padding:16px;z-index:2}
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    button{appearance:none;border:none;border-radius:10px;padding:10px 14px;background:#1b2a45;color:#e6fbff;font-weight:600;box-shadow:inset 0 0 0 1px #2b3e69;cursor:pointer}
+    button{appearance:none;border:none;border-radius:10px;padding:10px 14px;background:#1b2a45;color:#e6fbff;font-weight:600;box-shadow:inset 0 0 0 1px #2b3e69;cursor:pointer;touch-action:manipulation}
     button:hover{background:#20355a}.btn-ghost{background:#101b2f}
+    .me{font-weight:700;color:#00ffcc}
+    .timer{margin-left:auto;padding:8px 12px;border-radius:999px;background:#172746;border:1px solid #2b3e69;font-weight:700;min-width:88px;text-align:center}
+    .timer.warn{background:#2a1e1e;border-color:#6b2b2b}
+    .mobile-controls{position:fixed;left:0;right:0;bottom:0;padding:max(8px,env(safe-area-inset-bottom)) 12px 12px;background:linear-gradient(180deg,rgba(10,16,28,0),rgba(10,16,28,.85) 30%,rgba(10,16,28,.95));border-top:1px solid #233452;backdrop-filter:blur(6px);display:none;z-index:50}
+    .mobile-controls .grid{max-width:var(--card-w);margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+    .ctrl{border:1px solid #2b3e69;border-radius:14px;padding:12px;text-align:center;background:#0d1626;font-size:18px;font-weight:800;user-select:none;touch-action:manipulation}
+    .ctrl:active{transform:translateY(1px)}.ctrl.small{font-size:16px}
+    @media (pointer:coarse){ .mobile-controls{ display:block } }
   </style>
+
+  <!-- Farcaster Mini Apps SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@farcaster/mini-apps-sdk@latest/dist/browser/mini-apps-sdk.umd.js"></script>
+  <script>
+    function fcReady(){for(const a of [window?.FarcasterMiniAppsSDK?.actions,window?.farcaster?.actions,window?.warpcast?.actions,window?.sdk?.actions]){try{if(a&&typeof a.ready==='function'){a.ready();break}}catch(_){}}}
+    document.addEventListener('DOMContentLoaded',()=>setTimeout(fcReady,0));
+    // Oyun tuşlarında sayfa kaydırmayı engelle
+    window.addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault()},{passive:false});
+  </script>
 </head>
 <body>
-  <!-- Rank Banner -->
-  <div id="myRankBanner" class="banner">Connect wallet to see your rank <span class="version">Build v2025.10.05-final2</span></div>
+  <div id="myRankBanner" class="banner">
+    Connect wallet to play <span class="version">BUILD: FINAL-PROBE-106</span>
+  </div>
 
   <div class="container">
-    <!-- GAME -->
-    <div class="game-wrap">
-      <canvas id="tetris" width="240" height="400"></canvas>
+    <div class="game-card">
+      <canvas id="tetris" width="240" height="400" aria-label="TetriTiny game canvas"></canvas>
 
-      <!-- LOCK (no play until wallet connected) -->
+      <!-- Wallet lock -->
       <div id="lock" class="lock" aria-live="polite">
         <h3>Connect wallet to play</h3>
         <p>Your XP will be recorded on Base.</p>
         <div class="row">
           <button id="connect">🔗 Connect Wallet</button>
+          <button id="moreWallets" class="btn-ghost">Other wallets…</button>
         </div>
       </div>
 
-      <!-- Auto wallet deep-link (mobile, no provider) -->
-      <div id="autoWallet" class="lock" style="display:none;z-index:6">
+      <!-- Mobile: provider yoksa auto deep-link -->
+      <div id="autoWallet" class="lock" style="display:none; z-index:70">
         <h3 data-label>Opening in your wallet…</h3>
-        <p style="margin:0">Will redirect in 3s. Or choose below.</p>
+        <p style="margin:0">Redirecting in 3s. Or choose below.</p>
         <div class="row">
           <button id="autoOpenMM">Open in MetaMask</button>
           <button id="autoOpenCB">Open in Coinbase</button>
@@ -93,24 +100,20 @@
       </div>
     </div>
 
-    <!-- SIDE -->
-    <div class="side">
+    <div class="game-card">
       <h1>TetriTiny</h1>
-
       <div class="row">
-        <button id="connect-dup">🔗 Connect Wallet</button>
-        <!-- Start KALDIRILDI -->
+        <!-- Start kaldırıldı; Finish var -->
         <button id="finishButton">Finish</button>
-        <span id="countdown" class="timer" title="Time Left">⏱ 01:00</span>
+        <div id="countdown" class="timer" aria-live="polite" title="Time Left">⏱ 01:00</div>
       </div>
-
-      <p>Address: <span id="addr">Not connected</span></p>
-      <p>XP: <span id="xp">0</span></p>
-
-      <p>Score: <span id="score">0</span></p>
-      <p>Lines: <span id="lines">0</span></p>
-      <p>Level: <span id="level">1</span></p>
-
+      <div class="stats">
+        <p>Address: <span id="addr">Not connected</span></p>
+        <p>XP: <span id="xp">0</span></p>
+        <p>Score: <span id="score">0</span></p>
+        <p>Lines: <span id="lines">0</span></p>
+        <p>Level: <span id="level">1</span></p>
+      </div>
       <h2>Your Rank</h2>
       <ul id="leaderboard"></ul>
     </div>
@@ -129,47 +132,20 @@
 
   <!-- Game core -->
   <script src="tetris.js"></script>
-
-  <!-- Ethers.js -->
+  <!-- Ethers -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-  <!-- App -->
   <script>
   (function(){
-    const CONTRACT_ADDRESS = "0x1F268942987EE88397e6263b3Eff23a2840F31AD";
-    const DEPLOY_BLOCK     = 36327995;
+    const CONTRACT_ADDRESS="0x1F268942987EE88397e6263b3Eff23a2840F31AD";
+    const DEPLOY_BLOCK=36327995;
+    const BASE_PARAMS={chainId:'0x2105',chainName:'Base Mainnet',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://base.llamarpc.com'],blockExplorerUrls:['https://basescan.org/']};
+    const ABI=["event XpRecorded(address indexed player,uint256 amount,uint256 newTotal,bytes32 sessionId)","function record(uint256 amount,bytes32 sessionId) external","function totalXp(address) view returns (uint256)"];
 
-    const BASE_PARAMS = {
-      chainId: '0x2105',
-      chainName: 'Base Mainnet',
-      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-      rpcUrls: ['https://base.llamarpc.com'],
-      blockExplorerUrls: ['https://basescan.org/']
-    };
-    const ABI = [
-      "event XpRecorded(address indexed player, uint256 amount, uint256 newTotal, bytes32 sessionId)",
-      "function record(uint256 amount, bytes32 sessionId) external",
-      "function totalXp(address) view returns (uint256)"
-    ];
+    let currentAddress=null,xp=0,sessionXp=0,connected=false;
+    const $addr=document.getElementById("addr"),$lock=document.getElementById("lock"),$banner=document.getElementById("myRankBanner"),$timer=document.getElementById("countdown");
 
-    let currentAddress = null;
-    let xp = 0;
-    let sessionXp = 0;
-    let connected = false;
-
-    const $addr   = document.getElementById("addr");
-    const $banner = document.getElementById("myRankBanner");
-    const $lock   = document.getElementById("lock");
-    const $timer  = document.getElementById("countdown");
-
-    // prevent page scroll on game keys
-    window.addEventListener('keydown', (e)=>{
-      if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code) || [32,37,38,39,40].includes(e.keyCode)) {
-        e.preventDefault();
-      }
-    }, { passive:false });
-
-    // ---- SENTHETIC KEYS (adds legacy keyCode/which for game engines)
+    // Sentetik klavye (dokunmatik jest/tuşlar için)
     function synthKey(key){
       const map={ArrowLeft:37,ArrowUp:38,ArrowRight:39,ArrowDown:40,Space:32};
       const kc=map[key]||0;
@@ -179,326 +155,164 @@
       try{Object.defineProperty(ev,'charCode',{get:()=>0})}catch(_){}
       window.dispatchEvent(ev); document.dispatchEvent(ev);
     }
-    function vibrate(ms){ try{ navigator.vibrate?.(ms) }catch(_){} }
-    function isMobile(){ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) }
+    function vibrate(ms){try{navigator.vibrate?.(ms)}catch(_){}} function isMobile(){return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)}
 
-    // ---- Wallet ----
+    // Wallet helpers
     async function ensureBaseNetwork(provider){
-      const chainId = await provider.send('eth_chainId', []);
-      if (chainId !== BASE_PARAMS.chainId) {
-        try{ await provider.send('wallet_switchEthereumChain', [{ chainId: BASE_PARAMS.chainId }]) }
-        catch(e){
-          if (e.code === 4902 || String(e.message||'').includes('Unrecognized chain ID')){
-            await provider.send('wallet_addEthereumChain', [BASE_PARAMS]);
-          } else throw e;
-        }
+      const chainId=await provider.send('eth_chainId',[]);
+      if(chainId!==BASE_PARAMS.chainId){
+        try{await provider.send('wallet_switchEthereumChain',[{chainId:BASE_PARAMS.chainId}])}
+        catch(e){if(e.code===4902||String(e.message||'').includes('Unrecognized chain ID')){await provider.send('wallet_addEthereumChain',[BASE_PARAMS])}else{throw e}}
       }
     }
     async function connectInjected(){
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      await ensureBaseNetwork(provider);
-      const signer = provider.getSigner();
-      currentAddress = (await signer.getAddress()).toLowerCase();
-      $addr.textContent = currentAddress.slice(0,6) + "..." + currentAddress.slice(-4);
-      connected = true;
-      afterConnected();
+      const provider=new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts",[]); await ensureBaseNetwork(provider);
+      const signer=provider.getSigner(); currentAddress=(await signer.getAddress()).toLowerCase();
+      $addr.textContent=currentAddress.slice(0,6)+"..."+currentAddress.slice(-4);
+      connected=true; afterConnected();
     }
-    function openDeepLinkMM(){
-      const u = encodeURIComponent(location.href);
-      location.href = `https://link.metamask.io/dapp/${decodeURIComponent(u)}`;
-    }
-    function openDeepLinkCB(){
-      const u = encodeURIComponent(location.href);
-      location.href = `https://go.cb-w.com/dapp?cb_url=${u}`;
-    }
+    function openDeepLinkMetaMask(){const u=encodeURIComponent(location.href); location.href=`https://link.metamask.io/dapp/${decodeURIComponent(u)}`}
+    function openDeepLinkCoinbase(){const u=encodeURIComponent(location.href); location.href=`https://go.cb-w.com/dapp?cb_url=${u}`}
+
     async function connectWallet(){
       try{
-        if (window.ethereum){ await connectInjected(); }
-        else if (isMobile()){
-          // show deep-link overlay
-          const box=document.getElementById('autoWallet');
-          if (box) box.style.display='flex';
-          // auto-redirect after 3s
-          let t=3; const label=box.querySelector('[data-label]');
-          label.textContent = `Opening in your wallet (${t})…`;
-          const tick=setInterval(()=>{
-            t--; label.textContent = `Opening in your wallet (${t})…`;
-            if(t<=0){ clearInterval(tick); openDeepLinkMM(); }
-          },1000);
-          document.getElementById('autoOpenMM').onclick=()=>{ clearInterval(tick); openDeepLinkMM(); };
-          document.getElementById('autoOpenCB').onclick=()=>{ clearInterval(tick); openDeepLinkCB(); };
-          document.getElementById('skipAutoWallet').onclick=()=>{ box.style.display='none'; clearInterval(tick); };
+        if(window.ethereum){ await connectInjected() }
+        else if(isMobile()){
+          const box=document.getElementById('autoWallet'); box.style.display='flex';
+          let t=3; const label=box.querySelector('[data-label]'); label.textContent=`Opening in your wallet (${t})…`;
+          const tick=setInterval(()=>{ t--; label.textContent=`Opening in your wallet (${t})…`; if(t<=0){ clearInterval(tick); openDeepLinkMetaMask() } },1000);
+          document.getElementById('autoOpenMM').onclick=()=>{ clearInterval(tick); openDeepLinkMetaMask() };
+          document.getElementById('autoOpenCB').onclick=()=>{ clearInterval(tick); openDeepLinkCoinbase() };
+          document.getElementById('skipAutoWallet').onclick=()=>{ box.style.display='none'; clearInterval(tick) };
         }else{
           alert("Please install MetaMask or Coinbase Wallet.");
         }
-      }catch(e){ console.error(e); alert(e?.message || "Wallet connection failed"); }
+      }catch(e){ console.error(e); alert(e?.message||"Wallet connection failed") }
     }
-    document.getElementById("connect").addEventListener("click", connectWallet);
-    document.getElementById("connect-dup").addEventListener("click", connectWallet);
+    document.getElementById("connect").addEventListener("click",connectWallet);
+    document.getElementById("moreWallets").addEventListener("click",()=>{ const u=encodeURIComponent(location.href); open(location.href.includes('cb-w.com')?`https://go.cb-w.com/dapp?cb_url=${u}`:`https://link.metamask.io/dapp/${decodeURIComponent(u)}`,'_self') });
 
-    if (window.ethereum){
-      window.ethereum.on?.('accountsChanged', ()=>{ if(connected) connectInjected().catch(console.error); });
-      window.ethereum.on?.('chainChanged',   ()=>{ if(connected) connectInjected().catch(console.error); });
-    }
-
-    // ---- XP (UI + localStorage) ----
-    function loadXPFromStorage(){
-      if (!currentAddress) return;
-      const saved = localStorage.getItem("xp_" + currentAddress);
-      xp = saved ? parseInt(saved,10) : 0;
-      updateXPUI();
-    }
-    function addXP(amount){
-      sessionXp += amount;
-      xp += amount;
-      if (currentAddress){
-        localStorage.setItem("xp_" + currentAddress, String(xp));
-      }
-      updateXPUI();
-    }
-    function updateXPUI(){
-      const el = document.getElementById("xp");
-      if (el) el.textContent = xp;
+    if(window.ethereum){
+      window.ethereum.on?.('accountsChanged',()=>{ if(connected) connectInjected().catch(console.error) });
+      window.ethereum.on?.('chainChanged',()=>{ if(connected) connectInjected().catch(console.error) });
     }
 
-    // ---- On-chain XP ----
+    // XP (UI + localStorage)
+    function loadXPFromStorage(){ if(!currentAddress) return; const saved=localStorage.getItem("xp_"+currentAddress); xp=saved?parseInt(saved,10):0; updateXPUI() }
+    function addXP(a){ sessionXp+=a; xp+=a; if(currentAddress){ localStorage.setItem("xp_"+currentAddress,String(xp)) } updateXPUI() }
+    function updateXPUI(){ const el=document.getElementById("xp"); if(el) el.textContent=xp }
+
+    // On-chain XP
     async function flushXP(){
-      if (!currentAddress || sessionXp <= 0) return;
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await ensureBaseNetwork(provider);
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-      const sessionId = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-      try{
-        const tx = await contract.record(ethers.BigNumber.from(sessionXp), sessionId);
-        await tx.wait();
-        sessionXp = 0;
-        await fetchAndRenderMyRank();
-      }catch(e){
-        console.error("record() failed:", e);
-        alert("XP could not be saved: " + (e?.data?.message || e?.message || e));
-      }
+      if(!currentAddress||sessionXp<=0) return;
+      const provider=new ethers.providers.Web3Provider(window.ethereum); await ensureBaseNetwork(provider);
+      const signer=provider.getSigner(); const contract=new ethers.Contract(CONTRACT_ADDRESS,ABI,signer);
+      const sessionId=ethers.utils.hexlify(ethers.utils.randomBytes(32));
+      try{ const tx=await contract.record(ethers.BigNumber.from(sessionXp),sessionId); await tx.wait(); sessionXp=0; await fetchAndRenderMyRank() }
+      catch(e){ console.error(e); alert("XP could not be saved: "+(e?.data?.message||e?.message||e)) }
     }
 
-    // ---- Farcaster handle (Neynar) ----
+    // Rank
     async function getFarcasterHandle(addr){
-      try{
-        const resp = await fetch(`https://api.neynar.com/v2/farcaster/user-by-verification?address=${addr}`, {
-          headers: { "accept":"application/json", "api_key":"NEYNAR_ANON_API_KEY" }
-        });
-        if (!resp.ok) throw new Error("neynar http " + resp.status);
-        const data = await resp.json();
-        if (data?.result?.user?.username) return "@"+data.result.user.username;
-      }catch(e){
-        console.warn("farcaster lookup failed, fallback to address", e);
-      }
-      return null;
+      try{ const r=await fetch(`https://api.neynar.com/v2/farcaster/user-by-verification?address=${addr}`,{headers:{"accept":"application/json","api_key":"NEYNAR_ANON_API_KEY"}}); if(!r.ok) throw 0; const d=await r.json(); return d?.result?.user?.username?("@"+d.result.user.username):null }catch(_){ return null }
     }
-
-    // ---- Personal Rank ----
     async function fetchAndRenderMyRank(){
-      const banner = document.getElementById("myRankBanner");
-      const ul = document.getElementById("leaderboard");
-      banner.textContent = connected ? "Loading your rank…" : "Connect wallet to see your rank";
-
-      if (!currentAddress){
-        ul && (ul.innerHTML = "");
-        return;
-      }
-
+      const ul=document.getElementById("leaderboard");
+      $banner.textContent=connected?"Loading your rank…":"Connect wallet to play";
+      if(!currentAddress){ ul&&(ul.innerHTML=""); return }
       try{
-        const provider = new ethers.providers.JsonRpcProvider("https://base.llamarpc.com");
-        const contract  = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-        const currentBlock = await provider.getBlockNumber();
-
-        let players = new Set();
-        try{
-          const events = await contract.queryFilter("XpRecorded", DEPLOY_BLOCK, currentBlock);
-          events.forEach(ev => players.add(ev.args.player.toLowerCase()));
-        }catch(e){}
-
+        const provider=new ethers.providers.JsonRpcProvider("https://base.llamarpc.com");
+        const contract=new ethers.Contract(CONTRACT_ADDRESS,ABI,provider);
+        const currentBlock=await provider.getBlockNumber();
+        let players=new Set();
+        try{ const evs=await contract.queryFilter("XpRecorded",DEPLOY_BLOCK,currentBlock); evs.forEach(ev=>players.add(ev.args.player.toLowerCase())) }catch(_){}
         players.add(currentAddress);
-
-        const all = [];
-        for (const addr of players){
-          try{
-            const xpVal = await contract.totalXp(addr);
-            const xpNum = (()=>{ try { return xpVal.toNumber(); } catch(_) { return Number(xpVal.toString()); }})();
-            all.push({ address: addr, xp: xpNum });
-          }catch(e){
-            all.push({ address: addr, xp: 0 });
-          }
-        }
-
-        all.sort((a,b)=>b.xp - a.xp);
-        const myIndex = all.findIndex(x => x.address === currentAddress);
-        const myXp    = (myIndex >= 0 ? all[myIndex].xp : 0);
-
-        const handle  = await getFarcasterHandle(currentAddress);
-        const myName  = handle ? handle : (currentAddress.slice(0,6)+"..."+currentAddress.slice(-4));
-
-        banner.textContent = `You’re #${myIndex+1} — ${myXp} XP ${handle ? "(" + handle + ")" : ""}`;
-
-        if (ul){
-          ul.innerHTML = "";
-          const li = document.createElement("li");
-          li.className = "me";
-          li.textContent = `#${myIndex+1} ${myName} — ${myXp} XP (You)`;
-          ul.appendChild(li);
-        }
-      }catch(e){
-        const short = currentAddress ? (currentAddress.slice(0,6)+"..."+currentAddress.slice(-4)) : "you";
-        const bannerEl = document.getElementById("myRankBanner");
-        if (bannerEl) bannerEl.textContent = `You — 0 XP (${short})`;
+        const all=[]; for(const addr of players){ try{ const v=await contract.totalXp(addr); const n=(()=>{try{return v.toNumber()}catch(_){return Number(v.toString())}})(); all.push({address:addr,xp:n}) }catch(_){ all.push({address:addr,xp:0}) } }
+        all.sort((a,b)=>b.xp-a.xp); const myIndex=all.findIndex(x=>x.address===currentAddress); const myXp=myIndex>=0?all[myIndex].xp:0;
+        const handle=await getFarcasterHandle(currentAddress); const myName=handle||(currentAddress.slice(0,6)+"..."+currentAddress.slice(-4));
+        $banner.textContent=`You’re #${myIndex+1} — ${myXp} XP ${handle?("("+handle+")"):""}`;
+        if(ul){ ul.innerHTML=""; const li=document.createElement("li"); li.className="me"; li.textContent=`#${myIndex+1} ${myName} — ${myXp} XP (You)`; ul.appendChild(li) }
+      }catch(_){
+        const short=currentAddress?currentAddress.slice(0,6)+"..."+currentAddress.slice(-4):"you";
+        $banner.textContent=`You — 0 XP (${short})`;
       }
     }
+    window.addEventListener("load",fetchAndRenderMyRank);
 
-    // ---- Touch gestures on canvas ----
-    ;(function(){
-      const el = document.getElementById('tetris');
-      const TAP_MS=250, TAP_PX=12, STEP=24;
-      let sx=0,sy=0,lx=0,ly=0,t0=0,moved=false;
-      const opts={passive:false};
-      function onStart(e){const p=e.touches?e.touches[0]:e; sx=lx=p.clientX; sy=ly=p.clientY; t0=performance.now(); moved=false}
-      function onMove(e){
-        const p=e.touches?e.touches[0]:e, dx=p.clientX-lx, dy=p.clientY-ly;
-        const stepsX=Math.trunc(dx/STEP);
-        if(stepsX){ for(let i=0;i<Math.abs(stepsX);i++) synthKey(stepsX>0?'ArrowRight':'ArrowLeft'); lx+=stepsX*STEP; moved=true }
-        const stepsD=Math.trunc((p.clientY-ly)/STEP);
-        if(stepsD>0){ for(let i=0;i<stepsD;i++) synthKey('ArrowDown'); ly+=stepsD*STEP; moved=true }
-        e.preventDefault();
+    // Dokunmatik jestler
+    (function(){
+      const el=document.getElementById('tetris'); const TAP_MS=250,TAP_PX=12,STEP=24; let sx=0,sy=0,lx=0,ly=0,t0=0,moved=false; const opts={passive:false};
+      function onStart(e){const p=(e.touches?e.touches[0]:e); sx=lx=p.clientX; sy=ly=p.clientY; t0=performance.now(); moved=false}
+      function onMove(e){const p=(e.touches?e.touches[0]:e),dx=p.clientX-lx,dy=p.clientY-ly;
+        const stepsX=Math.trunc(dx/STEP); if(stepsX){ for(let i=0;i<Math.abs(stepsX);i++) synthKey(stepsX>0?'ArrowRight':'ArrowLeft'); lx+=stepsX*STEP; moved=true }
+        const stepsD=Math.trunc((p.clientY-ly)/STEP); if(stepsD>0){ for(let i=0;i<stepsD;i++) synthKey('ArrowDown'); ly+=stepsD*STEP; moved=true }
+        e.preventDefault()
       }
-      function onEnd(){
-        const dt=performance.now()-t0, dx=Math.abs(lx-sx), dy=Math.abs(ly-sy);
-        if(!moved && dt<=TAP_MS && dx<=TAP_PX && dy<=TAP_PX) synthKey('ArrowUp');
-      }
-      el.addEventListener('touchstart',onStart,opts);
-      el.addEventListener('touchmove',onMove,opts);
-      el.addEventListener('touchend',onEnd,opts);
-      el.addEventListener('pointerdown',onStart,opts);
-      el.addEventListener('pointermove',onMove,opts);
-      el.addEventListener('pointerup',onEnd,opts);
+      function onEnd(){const dt=performance.now()-t0,dx=Math.abs(lx-sx),dy=Math.abs(ly-sy); if(!moved&&dt<=TAP_MS&&dx<=TAP_PX&&dy<=TAP_PX) synthKey('ArrowUp')}
+      el.addEventListener('touchstart',onStart,opts); el.addEventListener('touchmove',onMove,opts); el.addEventListener('touchend',onEnd,opts);
+      el.addEventListener('pointerdown',onStart,opts); el.addEventListener('pointermove',onMove,opts); el.addEventListener('pointerup',onEnd,opts);
     })();
 
-    // ---- Mobile on-screen controls (repeat on hold) ----
-    ;(function(){
-      const bar=document.getElementById('mobileControls');
-      // force show if touch is available (bazı webview'lar @media'yı yanlış raporlar)
-      if(('ontouchstart' in window) || (navigator.maxTouchPoints>0)) bar.style.display='block';
-      const repeatable=new Set(['ArrowLeft','ArrowRight','ArrowDown']);
-      const timers=new Map();
-      function startRepeat(key,el){
-        synthKey(key);
-        if(!repeatable.has(key)) return;
-        const t1=setTimeout(()=>{ const t2=setInterval(()=>synthKey(key),70); timers.set(el,t2); },220);
-        timers.set(el,t1);
-      }
-      function stopRepeat(el){
-        const t=timers.get(el); if(!t) return;
-        clearTimeout(t); clearInterval(t); timers.delete(el);
-      }
-      bar.querySelectorAll('.ctrl').forEach(btn=>{
-        const key=btn.getAttribute('data-key');
-        btn.addEventListener('pointerdown',e=>{e.preventDefault();startRepeat(key,btn)});
-        ['pointerup','pointercancel','pointerleave'].forEach(ev=>btn.addEventListener(ev,()=>stopRepeat(btn)));
-        btn.addEventListener('click',e=>e.preventDefault());
+    // Ekran üstü mobil tuşlar
+    (function(){
+      const bar=document.getElementById('mobileControls'); if(('ontouchstart' in window) || (navigator.maxTouchPoints>0)){ bar.style.display='block'; }
+      const repeatable=new Set(['ArrowLeft','ArrowRight','ArrowDown']); const timers=new Map();
+      function startRepeat(key,el){synthKey(key); if(!repeatable.has(key))return; const t1=setTimeout(()=>{const t2=setInterval(()=>synthKey(key),70); timers.set(el,t2)},220); timers.set(el,t1)}
+      function stopRepeat(el){const t=timers.get(el); if(!t)return; clearTimeout(t); clearInterval(t); timers.delete(el)}
+      bar.querySelectorAll('.ctrl').forEach(btn=>{const key=btn.getAttribute('data-key');
+        btn.addEventListener('pointerdown',e=>{e.preventDefault();startRepeat(key,btn)}); ['pointerup','pointercancel','pointerleave'].forEach(ev=>btn.addEventListener(ev,()=>stopRepeat(btn))); btn.addEventListener('click',e=>e.preventDefault());
       });
     })();
 
-    // ---- Turbo + countdown (starts after connect) ----
-    ;(function(){
-      const TURBO={enabled:true,startMs:220,minMs:80,rampEverySec:10,rampStepMs:20,sessionSeconds:60};
-      let dropMs=TURBO.startMs, dropTimer=null, rampTimer=null, tickTimer=null, remaining=TURBO.sessionSeconds, running=false;
-
+    // Turbo + geri sayım (cüzdan bağlanınca başlar)
+    (function(){
+      const TURBO={enabled:true,startMs:220,minMs:80,rampEverySec:10,rampStepMs:20,sessionSeconds:60}; // süreyi/hızı buradan ayarla
+      let dropMs=TURBO.startMs,dropTimer=null,rampTimer=null,tickTimer=null,remaining=TURBO.sessionSeconds,running=false;
       function fmt(s){const m=String(Math.floor(s/60)).padStart(2,'0'),x=String(s%60).padStart(2,'0');return `${m}:${x}`}
-      function render(){ if($timer){ $timer.textContent=`⏱ ${fmt(remaining)}`; $timer.classList.toggle('warn', remaining<=10); } }
-      function start(){
-        if(!TURBO.enabled || running) return;
-        stop(); running=true; remaining=TURBO.sessionSeconds; dropMs=TURBO.startMs; render();
+      function render(){ if($timer){ $timer.textContent=`⏱ ${fmt(remaining)}`; $timer.classList.toggle('warn',remaining<=10) } }
+      function start(){ if(!TURBO.enabled||running) return; stop(); running=true; remaining=TURBO.sessionSeconds; dropMs=TURBO.startMs; render();
         dropTimer=setInterval(()=>synthKey('ArrowDown'),dropMs);
-        rampTimer=setInterval(()=>{ if(dropMs<=TURBO.minMs) return; dropMs=Math.max(TURBO.minMs, dropMs-TURBO.rampStepMs); clearInterval(dropTimer); dropTimer=setInterval(()=>synthKey('ArrowDown'),dropMs); }, TURBO.rampEverySec*1000);
-        tickTimer=setInterval(()=>{ remaining--; if(remaining<=10) vibrate(8); render(); if(remaining<=0) end(true); }, 1000);
+        rampTimer=setInterval(()=>{ if(dropMs<=TURBO.minMs) return; dropMs=Math.max(TURBO.minMs,dropMs-TURBO.rampStepMs); clearInterval(dropTimer); dropTimer=setInterval(()=>synthKey('ArrowDown'),dropMs) },TURBO.rampEverySec*1000);
+        tickTimer=setInterval(()=>{ remaining--; if(remaining<=10) vibrate(8); render(); if(remaining<=0) end(true) },1000);
       }
-      function stop(){ clearInterval(dropTimer); clearInterval(rampTimer); clearInterval(tickTimer); dropTimer=rampTimer=tickTimer=null; running=false; }
-      async function end(auto){
-        if(!running) return;
-        stop();
-        try{ await window.__miniapp?.flushXP?.() }catch(_){}
-        if($banner) $banner.textContent = auto ? "Round finished — XP saved (Time up)" : "Round finished — XP saved";
-        if($timer){ $timer.textContent = "⏱ 00:00"; $timer.classList.add('warn'); }
-        vibrate(30);
+      function stop(){ clearInterval(dropTimer); clearInterval(rampTimer); clearInterval(tickTimer); dropTimer=rampTimer=tickTimer=null; running=false }
+      async function end(auto){ if(!running) return; stop(); try{ await window.__miniapp?.flushXP?.() }catch(_){ }
+        if($banner) $banner.textContent=auto?'Round finished — XP saved (Time up)':'Round finished — XP saved';
+        if($timer){ $timer.textContent='⏱ 00:00'; $timer.classList.add('warn') } vibrate(30)
       }
-      document.getElementById('finishButton').addEventListener('click',()=> end(false));
-      window.__afterConnected = ()=>{ render(); start(); };
+      document.getElementById('finishButton').addEventListener('click',()=>end(false));
+      window.__afterConnected=()=>{render();start()}
     })();
 
-    // ---- After connect hook ----
+    // Bağlanınca başlat
     async function afterConnected(){
-      loadXPFromStorage();
-      fetchAndRenderMyRank().catch(console.error);
-      if ($lock) $lock.style.display = "none";
-      if ($banner) $banner.textContent = "Connected — good luck!";
-      if (typeof window.__afterConnected === 'function') window.__afterConnected();
+      loadXPFromStorage(); fetchAndRenderMyRank().catch(console.error);
+      if($lock) $lock.style.display='none'; if($banner) $banner.textContent='Connected — good luck!';
+      if(typeof window.__afterConnected==='function') window.__afterConnected();
     }
 
-    // ---- Initial rank try (may show connect prompt) ----
-    window.addEventListener("load", fetchAndRenderMyRank);
-
-    // expose to tetris.js if needed
-    window.__miniapp = { connectWallet, addXP, flushXP, fetchAndRenderMyRank };
-
-    // ---- Auto deep-link (mobile with no provider) on page load ----
-    ;(function(){
+    // Auto deep-link (mobil + provider yok)
+    (function(){
       const isMob=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       const hasEth=!!window.ethereum;
       const fromWallet=/metamask|coinbase/i.test(document.referrer);
-      if(!isMob || hasEth || fromWallet) return;
-      // show small auto overlay but don't interrupt if user closes it
+      if(!isMob||hasEth||fromWallet) return;
       const box=document.getElementById('autoWallet'); if(!box) return;
       const label=box.querySelector('[data-label]'); let t=3;
       box.style.display='flex'; label.textContent=`Opening in your wallet (${t})…`;
-      const tick=setInterval(()=>{ t--; label.textContent=`Opening in your wallet (${t})…`; if(t<=0){ clearInterval(tick); openDeepLinkMM(); } },1000);
-      document.getElementById('autoOpenMM').onclick=()=>{ clearInterval(tick); openDeepLinkMM(); };
-      document.getElementById('autoOpenCB').onclick=()=>{ clearInterval(tick); openDeepLinkCB(); };
-      document.getElementById('skipAutoWallet').onclick=()=>{ box.style.display='none'; clearInterval(tick); };
+      const tick=setInterval(()=>{ t--; label.textContent=`Opening in your wallet (${t})…`; if(t<=0){ clearInterval(tick); openDeepLinkMetaMask() } },1000);
+      document.getElementById('autoOpenMM').onclick=()=>{ clearInterval(tick); openDeepLinkMetaMask() };
+      document.getElementById('autoOpenCB').onclick=()=>{ clearInterval(tick); openDeepLinkCoinbase() };
+      document.getElementById('skipAutoWallet').onclick=()=>{ box.style.display='none'; clearInterval(tick) };
     })();
+
+    // Global kısayollar
+    window.addEventListener('keydown',e=>{ if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault() },{passive:false});
+
+    // Oyun API’sı
+    window.__miniapp = { connectWallet, addXP, flushXP, fetchAndRenderMyRank };
   })();
-  </script>
-
-  <!-- Farcaster Mini App SDK + ready() (esm.sh) + big splash -->
-  <script type="module">
-    import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
-
-    // Splash (Warpcast'ta kısa bir yumuşak açılış)
-    function showBigSplash() {
-      const css = document.createElement('style');
-      css.textContent = `
-        #appSplash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#1E1E2F;opacity:1}
-        #appSplash::before{content:"";position:absolute;inset:0;background:url('/splash.png') center/cover no-repeat}
-        #appSplash.fade{opacity:0;transition:opacity .35s ease}
-      `;
-      document.head.appendChild(css);
-      const el = document.createElement('div'); el.id = 'appSplash'; document.body.appendChild(el);
-      setTimeout(() => { el.classList.add('fade'); setTimeout(() => el.remove(), 380); }, 1200);
-    }
-
-    const callReadyOnce = (() => {
-      let called = false;
-      return async () => {
-        if (called) return; called = true;
-        try { await sdk.actions.ready(); }
-        catch (e) { console.warn('miniapp ready() skipped:', e); }
-        finally { showBigSplash(); }
-      };
-    })();
-
-    if (document.readyState === 'loading') {
-      window.addEventListener('DOMContentLoaded', callReadyOnce, { once: true });
-    } else {
-      callReadyOnce();
-    }
-    window.addEventListener('load', callReadyOnce, { once: true });
   </script>
 </body>
 </html>

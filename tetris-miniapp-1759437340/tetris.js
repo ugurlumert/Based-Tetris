@@ -144,6 +144,7 @@ document.addEventListener('keydown', e=>{
 function _startGame(){
   if(running) return;
   running=true; gameOver=false; lastTime=0;
+  try{ window.__miniapp?.ensureStartBonus?.(); }catch(_){}
   playerReset(); updateScore(); requestAnimationFrame(update);
 }
 window.tetrisStart=_startGame; window.startGame=_startGame; window.__tetris={ start:_startGame };

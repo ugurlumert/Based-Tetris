@@ -15,7 +15,7 @@ const player = { pos:{x:0,y:0}, matrix:null };
 
 let running   = false;
 let gameOver  = false;
-let dropInterval = 450;      // hızlı başlangıç
+let dropInterval = 450;
 let dropCounter  = 0;
 let lastTime     = 0;
 
@@ -91,7 +91,7 @@ function onPieceLocked(){
   piecesSinceLevel++;
   if(piecesSinceLevel>=8){
     piecesSinceLevel=0; level+=1;
-    dropInterval=Math.max(70, dropInterval-60); // minimum 70ms
+    dropInterval=Math.max(70, dropInterval-60);
     updateScore();
   }
 }

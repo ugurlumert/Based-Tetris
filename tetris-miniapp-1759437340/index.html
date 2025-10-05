@@ -49,12 +49,26 @@
     @media (pointer:coarse){ .mobile-controls{ display:block } }
 
     .me{ font-weight:700; color:#00ffcc }
+
+    /* Save-CTA overlay (mobil cüzdanlarda jest gerektiren durumlar için) */
+    #saveOverlay{
+      position:fixed; inset:0; display:none; z-index:10;
+      align-items:center; justify-content:center; text-align:center;
+      background:rgba(8,12,22,.76); backdrop-filter:blur(3px);
+      padding:20px;
+    }
+    #saveOverlay .box{
+      background:#0d1626; border:1px solid #2b3e69; border-radius:14px; padding:16px 18px; max-width:460px;
+      box-shadow:0 8px 24px rgba(0,0,0,.35)
+    }
+    #saveOverlay h3{ margin:0 0 8px; }
+    #saveOverlay p{ margin:0 0 12px; opacity:.9 }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@farcaster/mini-apps-sdk@latest/dist/browser/mini-apps-sdk.umd.js"></script>
 </head>
 <body>
-  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: 2025-10-05-autoflush+bonus</span></div>
+  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: 2025-10-06-cta</span></div>
 
   <div class="container">
     <div class="card">
@@ -89,6 +103,7 @@
     </div>
   </div>
 
+  <!-- Mobil butonlar -->
   <div class="mobile-controls" id="mobileControls">
     <div class="grid">
       <div class="ctrl" data-key="ArrowLeft">◀</div>
@@ -96,6 +111,19 @@
       <div class="ctrl" data-key="ArrowUp" title="Rotate">⟳</div>
       <div class="ctrl" data-key="ArrowDown" title="Soft drop">⬇</div>
       <div class="ctrl small" data-key="Space" title="Hard drop">⬇⬇</div>
+    </div>
+  </div>
+
+  <!-- Save XP CTA (fallback for mobile wallets) -->
+  <div id="saveOverlay" role="dialog" aria-live="polite">
+    <div class="box">
+      <h3>Save your XP on-chain</h3>
+      <p>If the wallet didn’t open automatically, tap the button below.</p>
+      <div class="row" style="justify-content:center">
+        <button id="saveNow">Save XP now</button>
+        <button id="saveOpenMM">Open in MetaMask</button>
+        <button id="saveOpenCB">Open in Coinbase</button>
+      </div>
     </div>
   </div>
 
@@ -138,12 +166,16 @@
     const $lock   = document.getElementById('lock');
     const $start  = document.getElementById('startButton');
     const $finish = document.getElementById('finishButton');
+    const $saveOverlay = document.getElementById('saveOverlay');
+    const $saveNow = document.getElementById('saveNow');
+    const $saveOpenMM = document.getElementById('saveOpenMM');
+    const $saveOpenCB = document.getElementById('saveOpenCB');
 
     /* ---------- State ---------- */
     let currentAddress = null; // lowercased
     let xp = 0, sessionXp = 0;
     let connected = false;
-    let startBonusGiven = false;   // <- her oyun icin 10 XP bonus kontrolü
+    let startBonusGiven = false;   // oyun başına tek sefer +10 XP
 
     const PENDING_KEY = (addr)=> `xp_pending_${addr}`;
 
@@ -151,7 +183,31 @@
       if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
     }, { passive:false });
 
-    /* ---------- Wallet helpers ---------- */
+    /* ---------- Helpers ---------- */
+    function showSaveCTA(){ $saveOverlay.style.display='flex'; }
+    function hideSaveCTA(){ $saveOverlay.style.display='none'; }
+
+    function urlWithFlush(){
+      const u = new URL(location.href);
+      u.searchParams.set('flush','1');
+      return u;
+    }
+    function openMetaMask(){
+      const u = urlWithFlush();
+      const hostPath = u.host + u.pathname + (u.search || '');
+      const uni = `https://metamask.app.link/dapp/${hostPath}`;
+      const sch = `metamask://dapp/${hostPath}`;
+      let opened=false; try{ const w=window.open(uni,'_blank'); if(w) opened=true; }catch(_){}
+      if(!opened) location.href=uni;
+      setTimeout(()=>{ try{ location.href=sch; }catch(_){} },1200);
+    }
+    function openCoinbase(){
+      const uni=`https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(urlWithFlush().toString())}`;
+      let opened=false; try{ const w=window.open(uni,'_blank'); if(w) opened=true; }catch(_){}
+      if(!opened) location.href=uni;
+    }
+
+    /* ---------- Wallet ---------- */
     async function ensureBaseNetwork(provider){
       const chainId = await provider.send('eth_chainId', []);
       if (chainId !== BASE_PARAMS.chainId) {
@@ -171,27 +227,6 @@
       currentAddress = (await signer.getAddress()).toLowerCase();
       $addr.textContent = currentAddress.slice(0,6)+"..."+currentAddress.slice(-4);
       afterConnected();
-    }
-
-    /* ---- Deep link (dapp + ?flush=1) ---- */
-    function urlWithFlush(){
-      const u = new URL(location.href);
-      u.searchParams.set('flush','1');
-      return u;
-    }
-    function openMetaMask(){
-      const u = urlWithFlush();
-      const hostPath = u.host + u.pathname + (u.search || '');
-      const uni = `https://metamask.app.link/dapp/${hostPath}`;
-      const sch = `metamask://dapp/${hostPath}`;
-      let opened=false; try{ const w=window.open(uni,'_blank'); if(w) opened=true; }catch(_){}
-      if(!opened) location.href=uni;
-      setTimeout(()=>{ try{ location.href=sch; }catch(_){} },1200);
-    }
-    function openCoinbase(){
-      const uni=`https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(urlWithFlush().toString())}`;
-      let opened=false; try{ const w=window.open(uni,'_blank'); if(w) opened=true; }catch(_){}
-      if(!opened) location.href=uni;
     }
 
     document.getElementById('connectBtn').addEventListener('click', async ()=>{
@@ -224,8 +259,9 @@
       syncXPUI();
     }
 
-    /* ---------- On-chain XP (throttle + retry) ---------- */
+    /* ---------- On-chain XP ---------- */
     let _flushing=false, _lastFlush=0, _queued=false;
+
     async function flushXP(){
       if (!currentAddress || sessionXp <= 0) return;
 
@@ -244,18 +280,20 @@
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
         const sessionId = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
+        // İşlem oluştur (kullanıcı onayı bekler)
         const tx = await contract.record(ethers.BigNumber.from(sessionXp), sessionId);
-        await tx.wait();
+        // Kullanıcı onayladı → bekleyen XP’yi sıfırla ve overlay’i gizle
         sessionXp = 0;
-        startBonusGiven = false; // oyundan sonra yeniden bonus verilebilir
+        startBonusGiven = false;
+        hideSaveCTA();
+
+        await tx.wait();
         await fetchAndRenderMyRank();
       }catch(e){
+        // Hata: çoğu zaman kullanıcı iptali veya jest gereksinimi
+        showSaveCTA();
         const msg = (e?.data?.message || e?.message || '').toString();
-        if (/rate limit|rate limited|limited/i.test(msg)) {
-          setTimeout(()=>{ _flushing=false; flushXP(); }, 17000);
-          return;
-        }
-        alert("XP save failed: " + msg);
+        console.warn("XP save failed:", msg);
       }finally{
         _lastFlush = Date.now();
         _flushing  = false;
@@ -263,7 +301,7 @@
       }
     }
 
-    /* ---- Game-over’da cüzdan yoksa beklemeye al + cüzdanı aç ---- */
+    /* ---- Game-over’da cüzdan yoksa pending + cüzdan aç ---- */
     function queueFlushAndOpenWallet(){
       if (!currentAddress || sessionXp <= 0) return;
       try {
@@ -272,9 +310,8 @@
         localStorage.setItem(key, String(prev + sessionXp));
         sessionXp = 0; // çift kayıt olmasın
       } catch(_) {}
-      // dapp link ile (?flush=1) aç
       if (confirm('Open wallet to record your XP?\nOK = MetaMask, Cancel = Coinbase')) openMetaMask(); else openCoinbase();
-      startBonusGiven = false; // yeni oyunda tekrar 10 XP verilir
+      startBonusGiven = false;
     }
 
     async function restorePendingAndFlush(){
@@ -343,7 +380,7 @@
     }
     window.addEventListener('load', fetchAndRenderMyRank);
 
-    /* ---------- Touch gestures ---------- */
+    /* ---------- Touch gestures (tek dispatch) ---------- */
     (function(){
       const el=$canvas, TAP_MS=250, TAP_PX=12, STEP=28;
       let sx=0,sy=0,lx=0,ly=0,t0=0,moved=false;
@@ -429,19 +466,18 @@
       $finish.disabled=false;
       try{ $canvas.focus(); }catch(_){}
 
-      // MetaMask/CB içinden ?flush=1 ile açıldıysa bekleyen XP'yi gönder
+      // ?flush=1 ile veya daha önce pending kaldıysa → gönder
       const u=new URL(location.href);
       if (u.searchParams.get('flush')==='1') {
         restorePendingAndFlush().catch(console.error);
       } else {
-        // yine de önceki bağlantılardan kalan pending varsa temizle
         restorePendingAndFlush().catch(console.error);
       }
     }
 
     /* ---------- Bridge to tetris.js ---------- */
     window.__miniapp = {
-      // her oyunun başında 10 XP bonus (oyun başına bir kez)
+      // Oyun başında 10 XP bonus (oyun başına 1 kez)
       ensureStartBonus: ()=>{
         if (!startBonusGiven) {
           sessionXp += 10;
@@ -453,8 +489,14 @@
       },
       addXP: (n)=>{ sessionXp += n; xp += n; if(currentAddress) localStorage.setItem("xp_" + currentAddress, String(xp)); syncXPUI(); },
       onGameOver: ()=>{
-        if (window.ethereum) { flushXP(); }
-        else { queueFlushAndOpenWallet(); }
+        if (window.ethereum) {
+          hideSaveCTA();
+          flushXP().catch(()=>showSaveCTA());
+          // 1.8s içinde hala sessionXp > 0 ise muhtemelen onay ekranı gelmedi → butonu göster
+          setTimeout(()=>{ if (sessionXp > 0) showSaveCTA(); }, 1800);
+        } else {
+          queueFlushAndOpenWallet();
+        }
       }
     };
 
@@ -467,6 +509,11 @@
         if(acc && acc.length) await connectInjected();
       }catch(_){}
     })();
+
+    /* ---------- Save Overlay Buttons ---------- */
+    $saveNow.addEventListener('click', ()=>{ hideSaveCTA(); flushXP(); });
+    $saveOpenMM.addEventListener('click', ()=>{ openMetaMask(); });
+    $saveOpenCB.addEventListener('click', ()=>{ openCoinbase(); });
 
   })();
   </script>

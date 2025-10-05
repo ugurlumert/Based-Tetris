@@ -24,6 +24,6 @@ This folder contains a ready-to-deploy Mini App:
 
 ## 4) Use it on Farcaster
 - Post a cast that includes your app URL. People can open and play inside the Farcaster Mini Apps experience.
-- To be listed/highlighted, engagement matters — keep iterating and sharing!
+- To be listed/highlighted, engagement matters — keep iterating and sharing!!
 
 Good luck and have fun! 🎮

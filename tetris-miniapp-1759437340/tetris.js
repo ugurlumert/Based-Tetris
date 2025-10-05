@@ -1,13 +1,12 @@
-// TetriTiny — tetris.js (copy-paste full file)
-// - Start dışarıdan çağrılabilir: window.tetrisStart() / window.__tetris.start()
-// - Game Over veya Finish -> XP flush + onGameOver() hook
-// - Klavye: ← → ↓ döndürme ↑, hard drop Space
+// TetriTiny — tetris.js (full)
+// - Start dışarıdan: window.tetrisStart() / window.__tetris.start()
+// - Finish veya Game Over: XP flush + "GAME OVER" overlay + durdur
 
 const canvas = document.getElementById('tetris');
 const ctx = canvas.getContext('2d');
 
 const COLS = 12, ROWS = 20, SCALE = 20;
-canvas.width = COLS * SCALE;
+canvas.width  = COLS * SCALE;
 canvas.height = ROWS * SCALE;
 ctx.scale(SCALE, SCALE);
 
@@ -22,10 +21,11 @@ const colors = [
   '#3877FF'  // Z
 ];
 
-const arena = createMatrix(COLS, ROWS);
-const player = { pos: { x: 0, y: 0 }, matrix: null };
+const arena  = createMatrix(COLS, ROWS);
+const player = { pos:{x:0,y:0}, matrix:null };
 
 let running = false;
+let gameOver = false;        // <— overlay bayrağı
 let dropInterval = 1000;
 let dropCounter  = 0;
 let lastTime     = 0;
@@ -37,12 +37,8 @@ const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
 
-/* ---------------- utilities ---------------- */
-function createMatrix(w, h){
-  const m = [];
-  while (h--) m.push(new Array(w).fill(0));
-  return m;
-}
+/* ---------------- utils ---------------- */
+function createMatrix(w,h){ const m=[]; while(h--) m.push(new Array(w).fill(0)); return m; }
 
 function createPiece(t){
   if (t==='T') return [[0,0,0],[1,1,1],[0,1,0]];
@@ -55,12 +51,10 @@ function createPiece(t){
 }
 
 function collide(arena, p){
-  const m = p.matrix, o = p.pos;
-  for (let y=0; y<m.length; y++){
-    for (let x=0; x<m[y].length; x++){
-      if (m[y][x]!==0 && ((arena[y+o.y] && arena[y+o.y][x+o.x])!==0)) {
-        return true;
-      }
+  const m=p.matrix, o=p.pos;
+  for(let y=0;y<m.length;y++){
+    for(let x=0;x<m[y].length;x++){
+      if(m[y][x]!==0 && ((arena[y+o.y] && arena[y+o.y][x+o.x])!==0)) return true;
     }
   }
   return false;
@@ -79,6 +73,7 @@ function rotate(mat, dir){
   if(dir>0) mat.forEach(r=>r.reverse()); else mat.reverse();
 }
 
+/* ---------------- çizim ---------------- */
 function drawMatrix(matrix, offset){
   matrix.forEach((row,y)=>row.forEach((v,x)=>{
     if(!v) return;
@@ -87,12 +82,32 @@ function drawMatrix(matrix, offset){
   }));
 }
 
-/* ---------------- render loop ---------------- */
+// GAME OVER overlay (ölçekten bağımsız çizim)
+function drawOverlay(text){
+  ctx.save();
+  ctx.setTransform(1,0,0,1,0,0);            // piksel koordinatı
+  ctx.fillStyle = 'rgba(5,10,20,0.75)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle = '#e6fbff';
+  ctx.font = 'bold 36px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, canvas.width/2, canvas.height/2 - 8);
+
+  ctx.font = '600 16px system-ui, sans-serif';
+  ctx.fillStyle = '#9cc6ff';
+  ctx.fillText('Press Start to play again', canvas.width/2, canvas.height/2 + 24);
+  ctx.restore();
+}
+
 function draw(){
-  ctx.fillStyle = '#0b1020';
+  ctx.fillStyle='#0b1020';
   ctx.fillRect(0,0,COLS,ROWS);
   drawMatrix(arena,{x:0,y:0});
   drawMatrix(player.matrix, player.pos);
+
+  if (gameOver) drawOverlay('GAME OVER');
 }
 
 function update(time=0){
@@ -110,7 +125,7 @@ function updateScore(){
   if(levelEl) levelEl.textContent = level;
 }
 
-/* ---------------- game rules ---------------- */
+/* ---------------- kurallar ---------------- */
 function arenaSweep(){
   let cleared = 0;
   outer: for(let y=arena.length-1;y>=0;y--){
@@ -128,11 +143,9 @@ function arenaSweep(){
     lines += cleared;
     updateScore();
 
-    // XP kazanımı (yerel)
     try{
-      if(window.__miniapp && typeof window.__miniapp.addXP==='function'){
-        window.__miniapp.addXP(cleared*10);
-      }
+      // Yerel XP
+      window.__miniapp?.addXP?.(cleared*10);
     }catch(_){}
   }
 }
@@ -147,16 +160,14 @@ function onPieceLocked(){
   }
 }
 
-/* ---------------- player actions ---------------- */
+/* ---------------- hareket ---------------- */
 function playerReset(){
   const types = 'TJLOSZI';
   player.matrix = createPiece(types[types.length*Math.random()|0]);
   player.pos.y = 0;
   player.pos.x = (arena[0].length/2|0) - (player.matrix[0].length/2|0);
-
-  // Başlangıçta çakışırsa: Game Over
   if(collide(arena, player)){
-    endGame();
+    endGame(); // tavan -> game over
   }
 }
 
@@ -202,54 +213,48 @@ function playerRotate(dir){
   }
 }
 
-/* ---------------- end game ---------------- */
+/* ---------------- bitiş ---------------- */
 function endGame(){
   running = false;
+  gameOver = true;
 
-  // 1) On-chain’e XP gönder (index.js tarafındaki flushXP)
-  try{
-    if (window.__miniapp && typeof window.__miniapp.flushXP === 'function') {
-      window.__miniapp.flushXP();
-    }
-  }catch(_){}
+  // 1) On-chain’e XP gönder
+  try{ window.__miniapp?.flushXP?.(); }catch(_){}
+  // 2) Hook/yedek sinyal
+  try{ window.__miniapp?.onGameOver?.(); }catch(_){}
+  window.__tetrisGameOver = true;
 
-  // 2) Harici dinleyiciye bildir (gerekirse)
-  try{
-    window.__miniapp?.onGameOver?.();
-  }catch(_){}
-  window.__tetrisGameOver = true; // yedek sinyal
-
-  // 3) Sahnede sıfırla
+  // 3) Skoru sıfırla, tabloyu temizle (sonraki oyuna hazır)
   arena.forEach(r=>r.fill(0));
   score=0; lines=0; level=1; dropInterval=1000; piecesSinceLevel=0;
   updateScore();
+
+  // 4) Overlay anında görünsün
+  draw();
 }
 
 /* ---------------- input ---------------- */
 document.addEventListener('keydown', e=>{
-  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
-    // sayfa kaymasın
-    e.preventDefault();
-  }
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
   if(!running) return;
-  if(e.code==='ArrowLeft') playerMove(-1);
+  if(e.code==='ArrowLeft')  playerMove(-1);
   else if(e.code==='ArrowRight') playerMove(1);
-  else if(e.code==='ArrowDown') playerDrop();
-  else if(e.code==='ArrowUp') playerRotate(1);
-  else if(e.code==='Space') hardDrop();
+  else if(e.code==='ArrowDown')  playerDrop();
+  else if(e.code==='ArrowUp')    playerRotate(1);
+  else if(e.code==='Space')      hardDrop();
 });
 
-/* ---------------- start/finish buttons ---------------- */
+/* ---------------- start/finish ---------------- */
 function _startGame(){
   if(running) return;
-  running = true;
+  running  = true;
+  gameOver = false;    // overlay kalksın
   lastTime = 0;
   playerReset();
   updateScore();
   requestAnimationFrame(update);
 }
-
-// Dışarıdan da çağrılabilsin (index.html fallback’leri için)
+// dışarıdan da erişim
 window.tetrisStart = _startGame;
 window.startGame  = _startGame;
 window.__tetris   = { start: _startGame };
@@ -257,8 +262,8 @@ window.__tetris   = { start: _startGame };
 const startBtn  = document.getElementById('startButton');
 const finishBtn = document.getElementById('finishButton');
 
-if(startBtn){  startBtn.addEventListener('click', _startGame); }
-if(finishBtn){ finishBtn.addEventListener('click', ()=>{ if(running) endGame(); }); }
+startBtn && startBtn.addEventListener('click', _startGame);
+finishBtn && finishBtn.addEventListener('click', ()=>{ if(running) endGame(); });
 
 /* ---------------- bootstrap ---------------- */
 playerReset();

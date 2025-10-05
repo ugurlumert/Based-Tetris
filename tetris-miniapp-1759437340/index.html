@@ -53,10 +53,11 @@
     .me{ font-weight:700; color:#00ffcc }
   </style>
 
+  <!-- Farcaster SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@farcaster/mini-apps-sdk@latest/dist/browser/mini-apps-sdk.umd.js"></script>
 </head>
 <body>
-  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: 2025-10-05-fast</span></div>
+  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: 2025-10-05-touchfix</span></div>
 
   <div class="container">
     <div class="card">
@@ -101,7 +102,9 @@
     </div>
   </div>
 
+  <!-- Game -->
   <script src="tetris.js"></script>
+  <!-- Ethers -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
   <script>
@@ -172,23 +175,20 @@
       afterConnected();
     }
 
-    // ---- Deep Link Helpers (robust) ----
+    /* ---- Robust Deep Links ---- */
     function cleanDappHost(){ return location.href.replace(/^https?:\/\//,''); }
     function openMetaMask(){
       const host  = cleanDappHost();
       const uni   = `https://metamask.app.link/dapp/${host}`;
       const sch   = `metamask://dapp/${host}`;
-      let opened = false;
-      try{ const w = window.open(uni, '_blank'); if (w) opened = true; }catch(_){}
-      if (!opened) location.href = uni;
-      setTimeout(()=>{ try{ location.href = sch; }catch(_){}} , 1200);
-      setTimeout(async ()=>{
-        try{ await navigator.clipboard.writeText(uni); alert('If MetaMask didn’t open, paste this in your browser:\n'+uni); }catch(_){}
-      }, 2400);
+      let opened=false; try{ const w=window.open(uni,'_blank'); if(w) opened=true; }catch(_){}
+      if(!opened) location.href=uni;
+      setTimeout(()=>{ try{ location.href=sch; }catch(_){} },1200);
+      setTimeout(async ()=>{ try{ await navigator.clipboard.writeText(uni); alert('If MetaMask didn’t open, paste this:\n'+uni); }catch(_){} },2400);
     }
     function openCoinbase(){
-      const url = encodeURIComponent(location.href);
-      const uni = `https://go.cb-w.com/dapp?cb_url=${url}`;
+      const url=encodeURIComponent(location.href);
+      const uni=`https://go.cb-w.com/dapp?cb_url=${url}`;
       let opened=false; try{ const w=window.open(uni,'_blank'); if(w) opened=true; }catch(_){}
       if(!opened) location.href=uni;
     }
@@ -315,39 +315,65 @@
     }
     window.addEventListener('load', fetchAndRenderMyRank);
 
-    /* ---------- Touch gestures ---------- */
+    /* ---------- Touch gestures (tek dispatch) ---------- */
     (function(){
-      const el=$canvas, TAP_MS=250, TAP_PX=12, STEP=24, opts={passive:false};
+      const el=$canvas, TAP_MS=250, TAP_PX=12, STEP=28; // STEP biraz büyütüldü (çift adım önleme)
       let sx=0,sy=0,lx=0,ly=0,t0=0,moved=false;
-      function synth(k){ const map={ArrowLeft:37,ArrowUp:38,ArrowRight:39,ArrowDown:40,Space:32};
-        const ev=new KeyboardEvent('keydown',{key:k,code:k,bubbles:true,cancelable:true});
-        try{Object.defineProperty(ev,'keyCode',{get:()=>map[k]||0})}catch(_){}
-        window.dispatchEvent(ev); document.dispatchEvent(ev); el.dispatchEvent(ev);
+
+      function synth(key){
+        const keyCodeMap = {ArrowLeft:37, ArrowUp:38, ArrowRight:39, ArrowDown:40, Space:32};
+        const ev = new KeyboardEvent('keydown', { key, code:key, bubbles:true, cancelable:true });
+        try { Object.defineProperty(ev, 'keyCode', { get: () => keyCodeMap[key] || 0 }); } catch(_) {}
+        document.dispatchEvent(ev);          // << SADECE BİR YERE
       }
+
       function start(e){const p=(e.touches?e.touches[0]:e); sx=lx=p.clientX; sy=ly=p.clientY; t0=performance.now(); moved=false}
-      function move(e){const p=(e.touches?e.touches[0]:e), dx=p.clientX-lx, dy=p.clientY-ly;
+      function move(e){
+        const p=(e.touches?e.touches[0]:e), dx=p.clientX-lx, dy=p.clientY-ly;
         const stepsX=Math.trunc(dx/STEP); if(stepsX){ for(let i=0;i<Math.abs(stepsX);i++) synth(stepsX>0?'ArrowRight':'ArrowLeft'); lx+=stepsX*STEP; moved=true }
         const stepsD=Math.trunc((p.clientY-ly)/STEP); if(stepsD>0){ for(let i=0;i<stepsD;i++) synth('ArrowDown'); ly+=stepsD*STEP; moved=true }
-        e.preventDefault()
+        e.preventDefault();
       }
       function end(){const dt=performance.now()-t0, dx=Math.abs(lx-sx), dy=Math.abs(ly-sy); if(!moved&&dt<=TAP_MS&&dx<=TAP_PX&&dy<=TAP_PX) synth('ArrowUp')}
-      el.addEventListener('touchstart',start,opts); el.addEventListener('touchmove',move,opts); el.addEventListener('touchend',end,opts);
-      el.addEventListener('pointerdown',start,opts); el.addEventListener('pointermove',move,opts); el.addEventListener('pointerup',end,opts);
+
+      // Pointer varsa onu kullan; yoksa Touch kullan → ÇİFT TETİKLEME YOK
+      if (window.PointerEvent){
+        const opts={passive:false};
+        el.addEventListener('pointerdown',start,opts);
+        el.addEventListener('pointermove', move, opts);
+        el.addEventListener('pointerup',   end,  opts);
+      }else{
+        const opts={passive:false};
+        el.addEventListener('touchstart',start,opts);
+        el.addEventListener('touchmove', move, opts);
+        el.addEventListener('touchend',  end,  opts);
+      }
     })();
+
+    /* ---------- Ekran üstü mobil butonlar (tek dispatch + stopPropagation) ---------- */
     (function(){
       const bar=document.getElementById('mobileControls');
       const isTouch = ()=> (navigator.maxTouchPoints>0) || window.matchMedia('(pointer:coarse)').matches;
       if(!isTouch()) return; bar.style.display='block';
-      const repeatable=new Set(['ArrowLeft','ArrowRight','ArrowDown']); const timers=new Map();
-      function synth(k){ const map={ArrowLeft:37,ArrowUp:38,ArrowRight:39,ArrowDown:40,Space:32};
-        const ev=new KeyboardEvent('keydown',{key:k,code:k,bubbles:true,cancelable:true});
-        try{Object.defineProperty(ev,'keyCode',{get:()=>map[k]||0})}catch(_){}
-        window.dispatchEvent(ev); document.dispatchEvent(ev); $canvas.dispatchEvent(ev);
+
+      function synth(key){
+        const keyCodeMap = {ArrowLeft:37, ArrowUp:38, ArrowRight:39, ArrowDown:40, Space:32};
+        const ev = new KeyboardEvent('keydown', { key, code:key, bubbles:true, cancelable:true });
+        try { Object.defineProperty(ev, 'keyCode', { get: () => keyCodeMap[key] || 0 }); } catch(_) {}
+        document.dispatchEvent(ev);          // << SADECE document
       }
-      function startR(key,el){synth(key); if(!repeatable.has(key))return; const t1=setTimeout(()=>{const t2=setInterval(()=>synth(key),70); timers.set(el,t2)},220); timers.set(el,t1)}
-      function stopR(el){const t=timers.get(el); if(!t)return; clearTimeout(t); clearInterval(t); timers.delete(el)}
-      bar.querySelectorAll('.ctrl').forEach(btn=>{const key=btn.getAttribute('data-key');
-        btn.addEventListener('pointerdown',e=>{e.preventDefault();startR(key,btn)}); ['pointerup','pointercancel','pointerleave'].forEach(ev=>btn.addEventListener(ev,()=>stopR(btn)));
+      const repeatable=new Set(['ArrowLeft','ArrowRight','ArrowDown']);
+      const timers=new Map();
+      function startR(key,el){ synth(key); if(!repeatable.has(key))return;
+        const t1=setTimeout(()=>{ const t2=setInterval(()=>synth(key),70); timers.set(el,t2); },220);
+        timers.set(el,t1);
+      }
+      function stopR(el){ const t=timers.get(el); if(!t)return; clearTimeout(t); clearInterval(t); timers.delete(el); }
+
+      bar.querySelectorAll('.ctrl').forEach(btn=>{
+        const key=btn.getAttribute('data-key');
+        btn.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); startR(key,btn); });
+        ['pointerup','pointercancel','pointerleave'].forEach(ev=> btn.addEventListener(ev,()=>stopR(btn)));
         btn.addEventListener('click',e=>e.preventDefault());
       });
     })();
@@ -355,8 +381,7 @@
     /* ---------- Responsive width ---------- */
     (function fitCard(){
       function fit(){
-        const reserved = 280;
-        const vh = window.innerHeight, vw = window.innerWidth;
+        const reserved = 280, vh = window.innerHeight, vw = window.innerWidth;
         const maxByHeight = Math.max(320, Math.floor((vh - reserved) * 0.60));
         const maxByWidth  = Math.floor(vw * 0.90);
         const w = Math.max(320, Math.min(560, maxByHeight, maxByWidth));
@@ -381,12 +406,13 @@
 
     /* ---------- Bridge to tetris.js ---------- */
     window.__miniapp = {
-      addXP: (n)=>{ sessionXp += n; xp += n; localStorage.setItem("xp_" + currentAddress, String(xp)); const el=document.getElementById("xp"); if(el) el.textContent=xp; },
+      addXP: (n)=>{ sessionXp += n; xp += n; if(currentAddress) localStorage.setItem("xp_" + currentAddress, String(xp));
+                    const el=document.getElementById("xp"); if(el) el.textContent=xp; },
       flushXP: ()=>{}, // tetris çağırmıyor; tek yer: onGameOver
       onGameOver: ()=>{ flushXP(); }
     };
 
-    /* ---------- Auto unlock if already authorized ---------- */
+    /* ---------- Auto unlock ---------- */
     (async function autoUnlock(){
       try{
         if(!window.ethereum) return;

@@ -54,7 +54,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@farcaster/mini-apps-sdk@latest/dist/browser/mini-apps-sdk.umd.js"></script>
 </head>
 <body>
-  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: 2025-10-05-mobile-flush</span></div>
+  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: 2025-10-05-autoflush+bonus</span></div>
 
   <div class="container">
     <div class="card">
@@ -143,6 +143,7 @@
     let currentAddress = null; // lowercased
     let xp = 0, sessionXp = 0;
     let connected = false;
+    let startBonusGiven = false;   // <- her oyun icin 10 XP bonus kontrolü
 
     const PENDING_KEY = (addr)=> `xp_pending_${addr}`;
 
@@ -172,19 +173,23 @@
       afterConnected();
     }
 
-    /* ---- Robust Deep Links ---- */
-    function cleanDappHost(){ return location.href.replace(/^https?:\/\//,''); }
+    /* ---- Deep link (dapp + ?flush=1) ---- */
+    function urlWithFlush(){
+      const u = new URL(location.href);
+      u.searchParams.set('flush','1');
+      return u;
+    }
     function openMetaMask(){
-      const host  = cleanDappHost();
-      const uni   = `https://metamask.app.link/dapp/${host}`;
-      const sch   = `metamask://dapp/${host}`;
+      const u = urlWithFlush();
+      const hostPath = u.host + u.pathname + (u.search || '');
+      const uni = `https://metamask.app.link/dapp/${hostPath}`;
+      const sch = `metamask://dapp/${hostPath}`;
       let opened=false; try{ const w=window.open(uni,'_blank'); if(w) opened=true; }catch(_){}
       if(!opened) location.href=uni;
       setTimeout(()=>{ try{ location.href=sch; }catch(_){} },1200);
     }
     function openCoinbase(){
-      const url=encodeURIComponent(location.href);
-      const uni=`https://go.cb-w.com/dapp?cb_url=${url}`;
+      const uni=`https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(urlWithFlush().toString())}`;
       let opened=false; try{ const w=window.open(uni,'_blank'); if(w) opened=true; }catch(_){}
       if(!opened) location.href=uni;
     }
@@ -205,17 +210,18 @@
     }
 
     /* ---------- XP (local) ---------- */
+    function syncXPUI(){ const el=document.getElementById("xp"); if(el) el.textContent = xp; }
     function loadXPFromStorage(){
       if (!currentAddress) return;
       const saved = localStorage.getItem("xp_" + currentAddress);
       xp = saved ? parseInt(saved,10) : 0;
-      const el = document.getElementById("xp"); if (el) el.textContent = xp;
+      syncXPUI();
     }
     function addXP(amount){
       sessionXp += amount;
       xp += amount;
       if (currentAddress) localStorage.setItem("xp_" + currentAddress, String(xp));
-      const el = document.getElementById("xp"); if (el) el.textContent = xp;
+      syncXPUI();
     }
 
     /* ---------- On-chain XP (throttle + retry) ---------- */
@@ -241,6 +247,7 @@
         const tx = await contract.record(ethers.BigNumber.from(sessionXp), sessionId);
         await tx.wait();
         sessionXp = 0;
+        startBonusGiven = false; // oyundan sonra yeniden bonus verilebilir
         await fetchAndRenderMyRank();
       }catch(e){
         const msg = (e?.data?.message || e?.message || '').toString();
@@ -256,17 +263,18 @@
       }
     }
 
-    /* ---- NEW: Game-over’da cüzdan yoksa beklemeye al + cüzdanı aç ---- */
+    /* ---- Game-over’da cüzdan yoksa beklemeye al + cüzdanı aç ---- */
     function queueFlushAndOpenWallet(){
       if (!currentAddress || sessionXp <= 0) return;
       try {
         const key = PENDING_KEY(currentAddress);
         const prev = parseInt(localStorage.getItem(key)||'0',10) || 0;
         localStorage.setItem(key, String(prev + sessionXp));
-        sessionXp = 0; // yeni oturumu sıfırla (çift kayıt olmasın)
+        sessionXp = 0; // çift kayıt olmasın
       } catch(_) {}
-      // MetaMask tercih; iptal edilirse Coinbase
+      // dapp link ile (?flush=1) aç
       if (confirm('Open wallet to record your XP?\nOK = MetaMask, Cancel = Coinbase')) openMetaMask(); else openCoinbase();
+      startBonusGiven = false; // yeni oyunda tekrar 10 XP verilir
     }
 
     async function restorePendingAndFlush(){
@@ -335,7 +343,7 @@
     }
     window.addEventListener('load', fetchAndRenderMyRank);
 
-    /* ---------- Touch gestures (tek dispatch) ---------- */
+    /* ---------- Touch gestures ---------- */
     (function(){
       const el=$canvas, TAP_MS=250, TAP_PX=12, STEP=28;
       let sx=0,sy=0,lx=0,ly=0,t0=0,moved=false;
@@ -368,7 +376,7 @@
       }
     })();
 
-    /* ---------- Ekran üstü mobil butonlar ---------- */
+    /* ---------- Mobil butonlar ---------- */
     (function(){
       const bar=document.getElementById('mobileControls');
       const isTouch = ()=> (navigator.maxTouchPoints>0) || window.matchMedia('(pointer:coarse)').matches;
@@ -420,18 +428,33 @@
       $start.disabled=false;
       $finish.disabled=false;
       try{ $canvas.focus(); }catch(_){}
-      // MetaMask içinde açıldıysa bekleyen XP'yi gönder
-      restorePendingAndFlush().catch(console.error);
+
+      // MetaMask/CB içinden ?flush=1 ile açıldıysa bekleyen XP'yi gönder
+      const u=new URL(location.href);
+      if (u.searchParams.get('flush')==='1') {
+        restorePendingAndFlush().catch(console.error);
+      } else {
+        // yine de önceki bağlantılardan kalan pending varsa temizle
+        restorePendingAndFlush().catch(console.error);
+      }
     }
 
     /* ---------- Bridge to tetris.js ---------- */
     window.__miniapp = {
-      addXP: (n)=>{ sessionXp += n; xp += n; if(currentAddress) localStorage.setItem("xp_" + currentAddress, String(xp));
-                    const el=document.getElementById("xp"); if(el) el.textContent=xp; },
-      // game over/finish tetikleyicisi
+      // her oyunun başında 10 XP bonus (oyun başına bir kez)
+      ensureStartBonus: ()=>{
+        if (!startBonusGiven) {
+          sessionXp += 10;
+          xp += 10;
+          if (currentAddress) localStorage.setItem("xp_" + currentAddress, String(xp));
+          startBonusGiven = true;
+          syncXPUI();
+        }
+      },
+      addXP: (n)=>{ sessionXp += n; xp += n; if(currentAddress) localStorage.setItem("xp_" + currentAddress, String(xp)); syncXPUI(); },
       onGameOver: ()=>{
-        if (window.ethereum) { flushXP(); }   // MetaMask/CBW içindeysek direkt gönder
-        else { queueFlushAndOpenWallet(); }   // değilsek: beklemeye al + cüzdan aç
+        if (window.ethereum) { flushXP(); }
+        else { queueFlushAndOpenWallet(); }
       }
     };
 
@@ -444,9 +467,6 @@
         if(acc && acc.length) await connectInjected();
       }catch(_){}
     })();
-
-    // Start/Finish butonlarını tetris.js ekliyor; burada sadece aktif/pasif yönetimi:
-    document.getElementById('finishButton').addEventListener('click', ()=>{/* tetris endGame çağırır, onGameOver tetiklenir */});
 
   })();
   </script>

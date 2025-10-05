@@ -1,7 +1,7 @@
-// TetriTiny — tetris.js (full)
+// TetriTiny — tetris.js (fast)
 // - Start dışarıdan: window.tetrisStart() / window.__tetris.start()
 // - Finish veya Game Over: "GAME OVER" overlay + durdur
-// - ÖNEMLİ: TX burada gönderilmiyor; index.html'deki flushXP tek yerden gönderecek.
+// - TX burada gönderilmiyor; index.html onGameOver -> flushXP tek yerden.
 
 const canvas = document.getElementById('tetris');
 const ctx = canvas.getContext('2d');
@@ -18,7 +18,7 @@ const player = { pos:{x:0,y:0}, matrix:null };
 
 let running   = false;
 let gameOver  = false;
-let dropInterval = 700;      // HIZLANDIRILDI (eski: 1000ms)
+let dropInterval = 450;      // BAŞLANGIÇ HIZI (ms) — çok daha hızlı
 let dropCounter  = 0;
 let lastTime     = 0;
 
@@ -29,7 +29,7 @@ const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
 
-/* ---------- utils ---------- */
+/* utils */
 function createMatrix(w,h){ const m=[]; while(h--) m.push(new Array(w).fill(0)); return m; }
 function createPiece(t){
   if (t==='T') return [[0,0,0],[1,1,1],[0,1,0]];
@@ -52,7 +52,7 @@ function rotate(mat,dir){
   if(dir>0) mat.forEach(r=>r.reverse()); else mat.reverse();
 }
 
-/* ---------- çizim ---------- */
+/* draw */
 function drawMatrix(matrix, off){ matrix.forEach((row,y)=>row.forEach((v,x)=>{ if(!v) return; ctx.fillStyle=colors[v]; ctx.fillRect(x+off.x,y+off.y,1,1);})); }
 function drawOverlay(text){
   ctx.save();
@@ -77,7 +77,7 @@ function update(t=0){
 }
 function updateScore(){ if(scoreEl) scoreEl.textContent=score; if(linesEl) linesEl.textContent=lines; if(levelEl) levelEl.textContent=level; }
 
-/* ---------- kurallar ---------- */
+/* rules */
 function arenaSweep(){
   let cleared=0;
   outer: for(let y=arena.length-1;y>=0;y--){
@@ -92,14 +92,14 @@ function arenaSweep(){
 }
 function onPieceLocked(){
   piecesSinceLevel++;
-  if(piecesSinceLevel>=12){                   // DAHA SIK LEVEL-UP
+  if(piecesSinceLevel>=8){           // daha sık hızlan
     piecesSinceLevel=0; level+=1;
-    dropInterval=Math.max(100, dropInterval-85); // DAHA HIZLI AZALSIN
+    dropInterval=Math.max(70, dropInterval-60); // minimum 70ms
     updateScore();
   }
 }
 
-/* ---------- hareketler ---------- */
+/* actions */
 function playerReset(){
   const types='TJLOSZI';
   player.matrix=createPiece(types[types.length*Math.random()|0]);
@@ -123,18 +123,16 @@ function playerRotate(d){
   while(collide(arena,player)){ player.pos.x+=off; off=-(off+(off>0?1:-1)); if(off>player.matrix[0].length){ rotate(player.matrix,-d); player.pos.x=pos; return; } }
 }
 
-/* ---------- bitiş ---------- */
+/* end */
 function endGame(){
   running=false; gameOver=true;
-  // TX index.html'de gönderilecek; burada sadece haber veriyoruz.
   try{ window.__miniapp?.onGameOver?.(); }catch(_){}
-  // Sıfırla (bir sonraki start için hazır)
   arena.forEach(r=>r.fill(0));
-  score=0; lines=0; level=1; dropInterval=700; piecesSinceLevel=0;
+  score=0; lines=0; level=1; dropInterval=450; piecesSinceLevel=0;
   updateScore(); draw();
 }
 
-/* ---------- input ---------- */
+/* input */
 document.addEventListener('keydown', e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
   if(!running) return;
@@ -145,7 +143,7 @@ document.addEventListener('keydown', e=>{
   else if(e.code==='Space') hardDrop();
 });
 
-/* ---------- start/finish ---------- */
+/* start/finish */
 function _startGame(){
   if(running) return;
   running=true; gameOver=false; lastTime=0;
@@ -158,5 +156,5 @@ const finishBtn=document.getElementById('finishButton');
 startBtn && startBtn.addEventListener('click', _startGame);
 finishBtn && finishBtn.addEventListener('click', ()=>{ if(running) endGame(); });
 
-/* ---------- boot ---------- */
+/* boot */
 playerReset(); updateScore(); draw();

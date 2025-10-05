@@ -11,24 +11,16 @@
   <meta property="og:title" content="TetriTiny — Onchain Tetris" />
   <meta property="og:description" content="Play Tetris, earn XP on Base, and see your personal rank." />
   <meta property="og:image" content="/cover.png" />
-  <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="/cover.png" />
 
-  <!-- Farcaster Mini App button (görsel/launch) -->
-  <meta name="fc:miniapp" content='{
-    "version":"2",
-    "imageUrl":"/cover.png",
-    "button":{"title":"Open TetriTiny",
-      "action":{"type":"launch_frame","name":"TetriTiny","url":"https://based-tetris.vercel.app/","splashImageUrl":"/splash.png","splashBackgroundColor":"#1E1E2F"}
-    }
-  }' />
+  <!-- Farcaster Mini App -->
+  <meta name="fc:miniapp" content='{"version":"2","imageUrl":"/cover.png","button":{"title":"Open TetriTiny","action":{"type":"launch_frame","name":"TetriTiny","url":"https://based-tetris.vercel.app/","splashImageUrl":"/splash.png","splashBackgroundColor":"#1E1E2F"}}}' />
 
   <!-- Icons -->
   <link rel="icon" href="/icon.png" />
   <link rel="apple-touch-icon" href="/icon.png" />
 
-  <!-- Basit stiller -->
   <style>
     :root{--card-w:clamp(320px,86vw,560px)}
     html,body{background:#0f1b2d;color:#e6fbff;margin:0}
@@ -36,7 +28,7 @@
     .version{font-size:12px;opacity:.7;margin-left:8px}
     .container{max-width:var(--card-w);margin:14px auto 88px;display:grid;gap:14px;padding:0 10px}
     .card{position:relative;background:#0d1626;border:1px solid #233452;border-radius:14px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-    #tetris{display:block;width:100%;height:auto;border-radius:10px;background:#091426;touch-action:none}
+    #tetris{display:block;width:100%;height:auto;border-radius:10px;background:#091426;touch-action:none;outline:none}
     .lock{position:absolute;inset:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:10px;background:rgba(10,16,28,.82);backdrop-filter:blur(3px);text-align:center;padding:16px;z-index:3}
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     button{appearance:none;border:none;border-radius:10px;padding:10px 14px;background:#1b2a45;color:#e6fbff;font-weight:600;box-shadow:inset 0 0 0 1px #2b3e69;cursor:pointer;touch-action:manipulation}
@@ -44,35 +36,31 @@
     button[disabled]{opacity:.6;cursor:not-allowed}
     .timer{margin-left:auto;padding:8px 12px;border-radius:999px;background:#172746;border:1px solid #2b3e69;font-weight:700;min-width:88px;text-align:center}
     .timer.warn{background:#2a1e1e;border-color:#6b2b2b}
-    /* Mobil ekran üstü tuşlar */
     .mobile-controls{position:fixed;left:0;right:0;bottom:0;padding:max(8px,env(safe-area-inset-bottom)) 12px 12px;background:linear-gradient(180deg,rgba(10,16,28,0),rgba(10,16,28,.85) 30%,rgba(10,16,28,.95));border-top:1px solid #233452;backdrop-filter:blur(6px);display:none;z-index:4}
     .mobile-controls .grid{max-width:var(--card-w);margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
     .ctrl{border:1px solid #2b3e69;border-radius:14px;padding:12px;text-align:center;background:#0d1626;font-size:18px;font-weight:800;user-select:none}
     .ctrl:active{transform:translateY(1px)}.ctrl.small{font-size:16px}
     @media (pointer:coarse){ .mobile-controls{display:block} }
-    /* Basit modal (mobilde wallet seçtir) */
     .modal{position:fixed;inset:0;display:none;z-index:10}
     .modal .sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#0d1626;border:1px solid #233452;border-radius:16px;padding:16px;max-width:92vw}
     .modal .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6)}
   </style>
 
-  <!-- Farcaster SDK (splash/ready) -->
+  <!-- Farcaster SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@farcaster/mini-apps-sdk@latest/dist/browser/mini-apps-sdk.umd.js"></script>
   <script>
     function fcReady(){for(const a of [window?.FarcasterMiniAppsSDK?.actions,window?.farcaster?.actions,window?.warpcast?.actions,window?.sdk?.actions]){try{if(a&&typeof a.ready==='function'){a.ready();break}}catch(_){}}}
     document.addEventListener('DOMContentLoaded',()=>setTimeout(fcReady,0));
-    // Scroll'u engelle ama oyun event'leri çalışsın
-    window.addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault()},{passive:false});
   </script>
 </head>
 <body>
-  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: PROBE-107</span></div>
+  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: PROBE-108</span></div>
 
   <div class="container">
     <div class="card">
-      <canvas id="tetris" width="240" height="400" aria-label="TetriTiny"></canvas>
+      <!-- ✅ tabindex eklendi: klavye için odaklanabilir -->
+      <canvas id="tetris" width="240" height="400" tabindex="0" aria-label="TetriTiny"></canvas>
 
-      <!-- Oyun kilidi (cüzdan yokken) -->
       <div id="lock" class="lock">
         <h3>Connect wallet to play</h3>
         <p>Your XP will be recorded on Base.</p>
@@ -86,7 +74,6 @@
     <div class="card">
       <h1 style="margin:6px 0 10px">TetriTiny</h1>
       <div class="row" style="margin-top:2px">
-        <!-- ✅ Start geri eklendi -->
         <button id="startButton" disabled>Start</button>
         <button id="finishButton" disabled>Finish</button>
         <div id="countdown" class="timer" aria-live="polite">⏱ 01:00</div>
@@ -105,7 +92,6 @@
     </div>
   </div>
 
-  <!-- Mobil on-screen tuşlar -->
   <div class="mobile-controls" id="mobileControls">
     <div class="grid">
       <div class="ctrl" data-key="ArrowLeft">◀</div>
@@ -116,7 +102,7 @@
     </div>
   </div>
 
-  <!-- Wallet modal (mobilde provider yoksa) -->
+  <!-- Wallet modal -->
   <div id="walletModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="wmTitle">
     <div class="sheet">
       <h4 id="wmTitle" style="margin:0 0 8px">Open in a wallet</h4>
@@ -130,9 +116,7 @@
     <div class="backdrop"></div>
   </div>
 
-  <!-- Oyun core -->
   <script src="tetris.js"></script>
-  <!-- Ethers -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
   <script>
@@ -142,17 +126,19 @@
     const BASE_PARAMS={chainId:'0x2105',chainName:'Base Mainnet',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://base.llamarpc.com'],blockExplorerUrls:['https://basescan.org/']};
     const ABI=["event XpRecorded(address indexed player,uint256 amount,uint256 newTotal,bytes32 sessionId)","function record(uint256 amount,bytes32 sessionId) external","function totalXp(address) view returns (uint256)"];
 
-    // --- helpers
+    const $canvas=document.getElementById('tetris');
+    const $banner=document.getElementById('topBanner');
+    const $lock=document.getElementById('lock');
+    const $start=document.getElementById('startButton');
+    const $finish=document.getElementById('finishButton');
+    const $timer=document.getElementById('countdown');
+    const $addr=document.getElementById('addr');
+    const $modal=document.getElementById('walletModal');
+
     const isTouch=()=> (navigator.maxTouchPoints>0) || window.matchMedia('(pointer:coarse)').matches;
     const synth=(key)=>{ const ev=new KeyboardEvent('keydown',{key,code:key,bubbles:true}); window.dispatchEvent(ev); document.dispatchEvent(ev) };
     const vibrate=(ms)=>{ try{ navigator.vibrate?.(ms) }catch(_){} };
 
-    // --- DOM
-    const $addr=document.getElementById('addr'), $lock=document.getElementById('lock'), $banner=document.getElementById('topBanner');
-    const $start=document.getElementById('startButton'), $finish=document.getElementById('finishButton'), $timer=document.getElementById('countdown');
-    const $modal=document.getElementById('walletModal');
-
-    // --- state
     let currentAddress=null, connected=false, xp=0, sessionXp=0;
 
     // ---- Wallet connect
@@ -172,14 +158,14 @@
       $addr.textContent=currentAddress.slice(0,6)+'...'+currentAddress.slice(-4);
       connected=true; afterConnected();
     }
-    function openMetaMask(){ const url=encodeURIComponent(location.href); location.href=`https://link.metamask.io/dapp/${decodeURIComponent(url)}` }
-    function openCoinbase(){ const url=encodeURIComponent(location.href); location.href=`https://go.cb-w.com/dapp?cb_url=${url}` }
+    function openMetaMask(){ const u=encodeURIComponent(location.href); location.href=`https://link.metamask.io/dapp/${decodeURIComponent(u)}` }
+    function openCoinbase(){ const u=encodeURIComponent(location.href); location.href=`https://go.cb-w.com/dapp?cb_url=${u}` }
     function showWM(){ $modal.style.display='block' } function hideWM(){ $modal.style.display='none' }
 
     async function onConnect(){
       try{
         if(window.ethereum){ await connectInjected() }
-        else { showWM() } // artık alert yok; modal açıyoruz
+        else{ showWM() }
       }catch(e){ console.error(e); alert(e?.message||'Wallet connection failed') }
     }
     document.getElementById('connectBtn').addEventListener('click', onConnect);
@@ -194,9 +180,9 @@
       window.ethereum.on?.('chainChanged',()=>{ if(connected) connectInjected().catch(console.error) });
     }
 
-    // --- XP local + chain
-    function loadXP(){ if(!currentAddress) return; const s=localStorage.getItem('xp_'+currentAddress); xp=s?parseInt(s,10):0; const el=document.getElementById('xp'); if(el) el.textContent=xp }
-    function addXP(a){ sessionXp+=a; xp+=a; if(currentAddress){ localStorage.setItem('xp_'+currentAddress,String(xp)) } const el=document.getElementById('xp'); if(el) el.textContent=xp }
+    // ---- XP local + chain
+    function loadXP(){ if(!currentAddress) return; const s=localStorage.getItem('xp_'+currentAddress); xp=s?parseInt(s,10):0; document.getElementById('xp').textContent=xp }
+    function addXP(a){ sessionXp+=a; xp+=a; if(currentAddress){ localStorage.setItem('xp_'+currentAddress,String(xp)) } document.getElementById('xp').textContent=xp }
     async function flushXP(){
       if(!currentAddress||sessionXp<=0) return;
       const provider=new ethers.providers.Web3Provider(window.ethereum); await ensureBase(provider);
@@ -236,23 +222,20 @@
     }
     window.addEventListener('load', fetchRank);
 
-    // --- Dokunmatik jestler
+    // ---- Touch gestures
     (function(){
-      const el=document.getElementById('tetris'), TAP_MS=250, TAP_PX=12, STEP=24, opts={passive:false};
+      const el=$canvas, TAP_MS=250, TAP_PX=12, STEP=24, opts={passive:false};
       let sx=0,sy=0,lx=0,ly=0,t0=0,moved=false;
       function start(e){const p=(e.touches?e.touches[0]:e); sx=lx=p.clientX; sy=ly=p.clientY; t0=performance.now(); moved=false}
-      function move(e){
-        const p=(e.touches?e.touches[0]:e), dx=p.clientX-lx, dy=p.clientY-ly;
+      function move(e){const p=(e.touches?e.touches[0]:e),dx=p.clientX-lx,dy=p.clientY-ly;
         const stepsX=Math.trunc(dx/STEP); if(stepsX){ for(let i=0;i<Math.abs(stepsX);i++) synth(stepsX>0?'ArrowRight':'ArrowLeft'); lx+=stepsX*STEP; moved=true }
-        const stepsD=Math.trunc((p.clientY-ly)/STEP); if(stepsD>0){ for(let i=0;i<stepsD;i++) synth('ArrowDown'); ly+=stepsD*STEP; moved=true }
-        e.preventDefault()
-      }
-      function end(){ const dt=performance.now()-t0, dx=Math.abs(lx-sx), dy=Math.abs(ly-sy); if(!moved&&dt<=TAP_MS&&dx<=TAP_PX&&dy<=TAP_PX) synth('ArrowUp') }
+        const stepsD=Math.trunc((p.clientY-ly)/STEP); if(stepsD>0){ for(let i=0;i<stepsD;i++) synth('ArrowDown'); ly+=stepsD*STEP; moved=true } e.preventDefault()}
+      function end(){const dt=performance.now()-t0,dx=Math.abs(lx-sx),dy=Math.abs(ly-sy); if(!moved&&dt<=TAP_MS&&dx<=TAP_PX&&dy<=TAP_PX) synth('ArrowUp')}
       el.addEventListener('touchstart',start,opts); el.addEventListener('touchmove',move,opts); el.addEventListener('touchend',end,opts);
       el.addEventListener('pointerdown',start,opts); el.addEventListener('pointermove',move,opts); el.addEventListener('pointerup',end,opts);
     })();
 
-    // --- Ekran üstü butonlar
+    // ---- On-screen buttons
     (function(){
       const bar=document.getElementById('mobileControls'); if(isTouch()) bar.style.display='block';
       const repeatable=new Set(['ArrowLeft','ArrowRight','ArrowDown']); const timers=new Map();
@@ -266,7 +249,7 @@
       });
     })();
 
-    // --- Turbo + sayaç (Start ile başlar)
+    // ---- Turbo + sayaç (Start ile)
     (function(){
       const TURBO={enabled:true,startMs:220,minMs:80,rampEverySec:10,rampStepMs:20,sessionSeconds:60};
       let dropMs=TURBO.startMs, dropTimer=null, rampTimer=null, tickTimer=null, remaining=TURBO.sessionSeconds, running=false;
@@ -274,7 +257,10 @@
       function fmt(s){const m=String(Math.floor(s/60)).padStart(2,'0'), x=String(s%60).padStart(2,'0'); return `${m}:${x}`}
       function render(){ if($timer){ $timer.textContent=`⏱ ${fmt(remaining)}`; $timer.classList.toggle('warn',remaining<=10) } }
 
+      function focusCanvas(){ $canvas?.focus({preventScroll:true}); setTimeout(()=> $canvas?.focus({preventScroll:true}), 50) }
+
       function start(){ if(!connected||running) return; stop(); running=true; remaining=TURBO.sessionSeconds; dropMs=TURBO.startMs; render();
+        focusCanvas();                                      /* ✅ klavye odak */
         dropTimer=setInterval(()=>synth('ArrowDown'),dropMs);
         rampTimer=setInterval(()=>{ if(dropMs<=TURBO.minMs) return; dropMs=Math.max(TURBO.minMs,dropMs-TURBO.rampStepMs); clearInterval(dropTimer); dropTimer=setInterval(()=>synth('ArrowDown'),dropMs) },TURBO.rampEverySec*1000);
         tickTimer=setInterval(()=>{ remaining--; if(remaining<=10) vibrate(8); render(); if(remaining<=0) end(true) },1000);
@@ -289,19 +275,22 @@
       $start.addEventListener('click', ()=>{ if(!connected){ showWM(); return } start() });
       $finish.addEventListener('click', ()=>end(false));
       render();
-      // dışarı lazımsa:
       window.__turbo={start,stop,end};
     })();
 
-    // --- Bağlanınca
+    // ---- After connect
     async function afterConnected(){
-      loadXP(); fetchRank().catch(console.error);
-      if($lock) $lock.style.display='none';
+      // kilidi tamamen kaldır (gölgeleme kalmasın)
+      $lock?.remove();
       $banner.textContent='Connected — press Start!';
       $start.disabled=false; $finish.disabled=true;
+      // XP & Rank
+      loadXP(); fetchRank().catch(console.error);
+      // Canvas odakla (PC klavye)
+      setTimeout(()=> $canvas?.focus({preventScroll:true}), 0);
     }
 
-    // --- Global API (tetris.js kullanıyor)
+    // ---- Global API (tetris.js)
     window.__miniapp={ connectWallet:onConnect, addXP, flushXP, fetchAndRenderMyRank:fetchRank };
   })();
   </script>

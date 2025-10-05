@@ -1,7 +1,4 @@
-// TetriTiny — tetris.js (fast)
-// - Start dışarıdan: window.tetrisStart() / window.__tetris.start()
-// - Finish veya Game Over: "GAME OVER" overlay + durdur
-// - TX burada gönderilmiyor; index.html onGameOver -> flushXP tek yerden.
+// TetriTiny — tetris.js (fast & touch-fix)
 
 const canvas = document.getElementById('tetris');
 const ctx = canvas.getContext('2d');
@@ -18,7 +15,7 @@ const player = { pos:{x:0,y:0}, matrix:null };
 
 let running   = false;
 let gameOver  = false;
-let dropInterval = 450;      // BAŞLANGIÇ HIZI (ms) — çok daha hızlı
+let dropInterval = 450;      // hızlı başlangıç
 let dropCounter  = 0;
 let lastTime     = 0;
 
@@ -92,7 +89,7 @@ function arenaSweep(){
 }
 function onPieceLocked(){
   piecesSinceLevel++;
-  if(piecesSinceLevel>=8){           // daha sık hızlan
+  if(piecesSinceLevel>=8){
     piecesSinceLevel=0; level+=1;
     dropInterval=Math.max(70, dropInterval-60); // minimum 70ms
     updateScore();

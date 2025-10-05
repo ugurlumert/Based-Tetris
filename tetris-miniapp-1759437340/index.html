@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#0f1b2d" />
   <meta name="color-scheme" content="dark" />
 
+  <!-- Social -->
   <meta property="og:title" content="TetriTiny — Onchain Tetris" />
   <meta property="og:description" content="Play Tetris, earn XP on Base, and see your personal rank." />
   <meta property="og:image" content="/cover.png" />
@@ -32,13 +33,13 @@
     button{appearance:none;border:none;border-radius:10px;padding:10px 14px;background:#1b2a45;color:#e6fbff;font-weight:600;box-shadow:inset 0 0 0 1px #2b3e69;cursor:pointer;touch-action:manipulation}
     button:hover{background:#20355a}
     button[disabled]{opacity:.6;cursor:not-allowed}
-    .timer{margin-left:auto;padding:8px 12px;border-radius:999px;background:#172746;border:1px solid #2b3e69;font-weight:700;min-width:88px;text-align:center}
-    .timer.warn{background:#2a1e1e;border-color:#6b2b2b}
+    /* Mobil kontrol barı */
     .mobile-controls{position:fixed;left:0;right:0;bottom:0;padding:max(8px,env(safe-area-inset-bottom)) 12px 12px;background:linear-gradient(180deg,rgba(10,16,28,0),rgba(10,16,28,.85) 30%,rgba(10,16,28,.95));border-top:1px solid #233452;backdrop-filter:blur(6px);display:none;z-index:4}
     .mobile-controls .grid{max-width:var(--card-w);margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
     .ctrl{border:1px solid #2b3e69;border-radius:14px;padding:12px;text-align:center;background:#0d1626;font-size:18px;font-weight:800;user-select:none}
     .ctrl:active{transform:translateY(1px)}.ctrl.small{font-size:16px}
     @media (pointer:coarse){ .mobile-controls{display:block} }
+    /* Wallet modal */
     .modal{position:fixed;inset:0;display:none;z-index:10}
     .modal .sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#0d1626;border:1px solid #233452;border-radius:16px;padding:16px;max-width:92vw}
     .modal .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6)}
@@ -48,13 +49,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@farcaster/mini-apps-sdk@latest/dist/browser/mini-apps-sdk.umd.js"></script>
 </head>
 <body>
-  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: PROBE-109</span></div>
+  <div class="banner" id="topBanner">Connect wallet to play <span class="version">BUILD: PROBE-110</span></div>
 
   <div class="container">
     <div class="card">
       <canvas id="tetris" width="240" height="400" aria-label="TetriTiny"></canvas>
 
-      <!-- Lock overlay -->
+      <!-- Kilit overlay (cüzdan yokken) -->
       <div id="lock" class="lock" aria-live="polite">
         <h3>Connect wallet to play</h3>
         <p>Your XP will be recorded on Base.</p>
@@ -70,7 +71,6 @@
       <div class="row" style="margin-top:2px">
         <button id="startButton" disabled>Start</button>
         <button id="finishButton" disabled>Finish</button>
-        <div id="countdown" class="timer" aria-live="polite">⏱ 01:00</div>
       </div>
 
       <div class="stats">
@@ -86,7 +86,7 @@
     </div>
   </div>
 
-  <!-- Mobile touch bar -->
+  <!-- Mobil dokunmatik bar -->
   <div class="mobile-controls" id="mobileControls">
     <div class="grid">
       <div class="ctrl" data-key="ArrowLeft">◀</div>
@@ -117,46 +117,44 @@
 
   <script>
   (function(){
-    /* ------------ Farcaster splash fix: robust ready() ------------- */
+    /* -------- Farcaster splash fix (ready ping) -------- */
     (function readyPinger(){
       const cands=[window?.FarcasterMiniAppsSDK?.actions,window?.farcaster?.actions,window?.warpcast?.actions,window?.sdk?.actions];
-      let tries=0;
-      const tick=setInterval(()=>{
-        tries++;
-        for(const a of cands){ try{ if(a && typeof a.ready==='function'){ a.ready(); clearInterval(tick); return } }catch(_){ } }
-        if(tries>50) clearInterval(tick); // ~5s sonra bırak
+      let tries=0; const tick=setInterval(()=>{
+        tries++; for(const a of cands){ try{ if(a && typeof a.ready==='function'){ a.ready(); clearInterval(tick); return } }catch(_){ } }
+        if(tries>50) clearInterval(tick);
       },100);
     })();
 
-    /* ----------------- Config ------------------ */
+    /* --------------- Config ---------------- */
     const CONTRACT_ADDRESS="0x1F268942987EE88397e6263b3Eff23a2840F31AD";
     const DEPLOY_BLOCK=36327995;
     const BASE_PARAMS={chainId:'0x2105',chainName:'Base Mainnet',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://base.llamarpc.com'],blockExplorerUrls:['https://basescan.org/']};
     const ABI=["event XpRecorded(address indexed player,uint256 amount,uint256 newTotal,bytes32 sessionId)","function record(uint256 amount,bytes32 sessionId) external","function totalXp(address) view returns (uint256)"];
 
-    /* ----------------- DOM ------------------ */
+    /* --------------- DOM ---------------- */
     const $addr=document.getElementById('addr'), $lock=document.getElementById('lock'), $banner=document.getElementById('topBanner');
-    const $start=document.getElementById('startButton'), $finish=document.getElementById('finishButton'), $timer=document.getElementById('countdown');
+    const $start=document.getElementById('startButton'), $finish=document.getElementById('finishButton');
     const $canvas=document.getElementById('tetris'); const $modal=document.getElementById('walletModal');
 
-    /* ----------------- State ------------------ */
+    /* --------------- State ---------------- */
     let currentAddress=null, connected=false, xp=0, sessionXp=0, gameRunning=false;
 
-    /* ----------------- Helpers ------------------ */
+    /* --------------- Helpers ---------------- */
     const isTouch=()=> (navigator.maxTouchPoints>0) || window.matchMedia('(pointer:coarse)').matches;
     function synth(key){ const map={ArrowLeft:37,ArrowUp:38,ArrowRight:39,ArrowDown:40,Space:32};
       const ev=new KeyboardEvent('keydown',{key,code:key,bubbles:true,cancelable:true}); try{Object.defineProperty(ev,'keyCode',{get:()=>map[key]||0})}catch(_){}
       window.dispatchEvent(ev); document.dispatchEvent(ev) }
-    function vibrate(ms){ try{navigator.vibrate?.(ms)}catch(_){}} function focusCanvas(){ try{$canvas?.focus()}catch(_){} }
+    function focusCanvas(){ try{$canvas?.focus()}catch(_){} }
     function enableStart(on){ $start.disabled=!on; if(on){ $start.removeAttribute('disabled'); $start.setAttribute('aria-disabled','false') } }
 
-    // Sadece oyun sırasında scroll/space engelle
+    // Klavye defaultlarını yalnızca oyun sırasında engelle
     window.addEventListener('keydown', e=>{
       if(!gameRunning) return;
       if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
     }, {passive:false});
 
-    /* ----------------- Wallet ------------------ */
+    /* --------------- Wallet ---------------- */
     async function ensureBase(provider){
       const id=await provider.send('eth_chainId',[]);
       if(id!==BASE_PARAMS.chainId){
@@ -195,7 +193,7 @@
       window.ethereum.on?.('chainChanged',   async ()=>{ if(connected){ await connectInjected().catch(console.error) } });
     }
 
-    // Sayfa açılışında zaten bağlı hesap varsa otomatik unlock
+    // Açılışta zaten bağlı hesap varsa otomatik unlock
     (async function autoUnlock(){
       try{
         if(!window.ethereum) return;
@@ -205,11 +203,11 @@
       }catch(_){}
     })();
 
-    /* ----------------- XP ------------------ */
+    /* --------------- XP ---------------- */
     function loadXP(){ if(!currentAddress) return; const s=localStorage.getItem('xp_'+currentAddress); xp=s?parseInt(s,10):0; document.getElementById('xp').textContent=xp }
     function addXP(a){ sessionXp+=a; xp+=a; if(currentAddress){ localStorage.setItem('xp_'+currentAddress,String(xp)) } document.getElementById('xp').textContent=xp }
     async function flushXP(){
-      if(!currentAddress||sessionXp<=0) return;
+      if(!currentAddress || sessionXp<=0) return;
       const provider=new ethers.providers.Web3Provider(window.ethereum); await ensureBase(provider);
       const signer=provider.getSigner(); const c=new ethers.Contract(CONTRACT_ADDRESS,ABI,signer);
       const sid=ethers.utils.hexlify(ethers.utils.randomBytes(32));
@@ -217,7 +215,7 @@
       catch(e){ console.error(e); alert('XP save failed: '+(e?.data?.message||e?.message||e)) }
     }
 
-    /* ----------------- Rank ------------------ */
+    /* --------------- Rank ---------------- */
     async function farcasterHandle(addr){
       try{ const r=await fetch(`https://api.neynar.com/v2/farcaster/user-by-verification?address=${addr}`,{headers:{accept:'application/json',api_key:'NEYNAR_ANON_API_KEY'}}); if(!r.ok) throw 0; const d=await r.json(); return d?.result?.user?.username?('@'+d.result.user.username):null }catch(_){ return null }
     }
@@ -248,7 +246,7 @@
     }
     window.addEventListener('load', fetchRank);
 
-    /* ----------------- Touch gestures ------------------ */
+    /* --------------- Dokunmatik jestler ---------------- */
     (function(){
       const el=$canvas, TAP_MS=250, TAP_PX=12, STEP=24, opts={passive:false};
       let sx=0,sy=0,lx=0,ly=0,t0=0,moved=false;
@@ -263,7 +261,7 @@
       el.addEventListener('pointerdown',start,opts); el.addEventListener('pointermove',move,opts); el.addEventListener('pointerup',end,opts);
     })();
 
-    /* ----------------- On-screen buttons ------------------ */
+    /* --------------- On-screen butonlar ---------------- */
     (function(){
       const bar=document.getElementById('mobileControls'); if(isTouch()) bar.style.display='block';
       const repeatable=new Set(['ArrowLeft','ArrowRight','ArrowDown']); const timers=new Map();
@@ -275,48 +273,46 @@
       });
     })();
 
-    /* ----------------- Turbo + countdown ------------------ */
-    (function(){
-      const TURBO={enabled:true,startMs:220,minMs:80,rampEverySec:10,rampStepMs:20,sessionSeconds:60};
-      let dropMs=TURBO.startMs,dropTimer=null,rampTimer=null,tickTimer=null,remaining=TURBO.sessionSeconds;
+    /* --------------- Başlat / Bitir ---------------- */
+    function startGame(){
+      if(!connected || gameRunning) return;
+      gameRunning=true; enableStart(false); $finish.disabled=false; focusCanvas();
+      // Masaüstünde Start'a basmayı unutursa: ilk yön tuşu da oyunu başlatır — ama burada zaten başlattık.
+    }
+    async function endGame(auto){
+      if(!gameRunning) return;
+      gameRunning=false; enableStart(true); $finish.disabled=true;
+      try{ await flushXP() }catch(_){}
+    }
+    $start.addEventListener('click', ()=>{ if(!connected){ showWM(); return } startGame() });
+    $finish.addEventListener('click', ()=>endGame(false));
 
-      function fmt(s){const m=String(Math.floor(s/60)).padStart(2,'0'),x=String(s%60).padStart(2,'0');return `${m}:${x}`}
-      function render(){ if($timer){ $timer.textContent=`⏱ ${fmt(remaining)}`; $timer.classList.toggle('warn',remaining<=10) } }
+    // bağlıyken ilk yön tuşu da start olsun
+    window.addEventListener('keydown', (e)=>{ if(!connected||gameRunning) return;
+      if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)){ startGame() }
+    });
 
-      function start(){ if(!connected||gameRunning) return; stop(); gameRunning=true; remaining=TURBO.sessionSeconds; dropMs=TURBO.startMs; render();
-        focusCanvas();
-        dropTimer=setInterval(()=>synth('ArrowDown'),dropMs);
-        rampTimer=setInterval(()=>{ if(dropMs<=TURBO.minMs) return; dropMs=Math.max(TURBO.minMs,dropMs-TURBO.rampStepMs); clearInterval(dropTimer); dropTimer=setInterval(()=>synth('ArrowDown'),dropMs) },TURBO.rampEverySec*1000);
-        tickTimer=setInterval(()=>{ remaining--; if(remaining<=10) vibrate(8); render(); if(remaining<=0) end(true) },1000);
-        enableStart(false); $finish.disabled=false;
-      }
-      function stop(){ clearInterval(dropTimer); clearInterval(rampTimer); clearInterval(tickTimer); dropTimer=rampTimer=tickTimer=null; gameRunning=false }
-      async function end(auto){ if(!gameRunning) return; stop(); try{ await flushXP() }catch(_){}
-        if($timer){ $timer.textContent='⏱ 00:00'; $timer.classList.add('warn') }
-        enableStart(true); $finish.disabled=true;
-      }
-      $start.addEventListener('click', ()=>{ if(!connected){ showWM(); return } start() });
-      $finish.addEventListener('click', ()=>end(false));
-
-      // Bağlıyken "Start'a basmayı unutan" masaüstü kullanıcıları için: ilk yön tuşu oyunu başlatır.
-      window.addEventListener('keydown', (e)=>{ if(!connected||gameRunning) return;
-        if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)){ start() }
-      });
-
-      render();
-    })();
-
-    /* ----------------- After connect ------------------ */
+    /* --------------- Bağlanınca ---------------- */
     async function afterConnected(){
       connected=true; loadXP(); fetchRank().catch(console.error);
       $lock.style.display='none';
       $banner.textContent='Connected — press Start!';
-      enableStart(true); $finish.disabled=true;
-      focusCanvas();
+      enableStart(true); $finish.disabled=true; focusCanvas();
     }
 
-    /* ----------------- Export for tetris.js ------------------ */
-    window.__miniapp={ connectWallet:onConnect, addXP, flushXP, fetchAndRenderMyRank:fetchRank };
+    /* --------------- Game over entegrasyonu ----------------
+       tetris.js oyun bittiğinde şu satırı çağırmalı:
+         window.__miniapp?.onGameOver?.();
+       Ek olarak bir "polling fallback" da koyduk; eğer tetris.js global
+       window.__tetrisGameOver = true yaparsa, otomatik flush olur.        */
+    window.__miniapp = {
+      connectWallet: onConnect,
+      addXP,
+      flushXP,
+      fetchAndRenderMyRank: fetchRank,
+      onGameOver: () => endGame(true)   // tetris.js burayı çağıracak
+    };
+    setInterval(()=>{ if(window.__tetrisGameOver){ window.__tetrisGameOver=false; endGame(true) } }, 600);
   })();
   </script>
 </body>
